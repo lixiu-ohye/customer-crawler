@@ -1,4 +1,4 @@
-import{_ as g,r as i,c as t,a as o,b as c,F as y,B as k,w as d,p as V,I as C,d as n,f as s,t as A,j as m,E as B}from"./index-DDyWFc80.js";const I={class:"page-card"},N={class:"disclaimer-box"},w={class:"mt16"},D={key:0,style:{"margin-left":"12px",color:"#67C23A","font-size":"13px"}},E={__name:"Disclaimer",setup(S){const a=i(!1),r=i(localStorage.getItem("disclaimerAccepted")==="1"),p=C(()=>`本平台提供的客户大数据采集与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
+import{_ as g,r as i,c as t,a as o,b as c,F as y,B as k,w as d,p as V,I as C,d as n,f as s,t as A,j as m,E as B}from"./index-CuEuzHrv.js";const I={class:"page-card"},N={class:"disclaimer-box"},w={class:"mt16"},D={key:0,style:{"margin-left":"12px",color:"#67C23A","font-size":"13px"}},E={__name:"Disclaimer",setup(S){const a=i(!1),r=i(localStorage.getItem("disclaimerAccepted")==="1"),p=C(()=>`本平台提供的客户大数据采集与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
 使用本平台前，请您仔细阅读并理解以下条款：
 
 一、合法性声明
