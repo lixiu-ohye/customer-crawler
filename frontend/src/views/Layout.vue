@@ -41,7 +41,7 @@
       </el-main>
       <el-footer class="footer">
         <span>本平台仅用于合法合规的商业调研与客户开发 · 禁止骚扰、诈骗、侵犯隐私等违法用途 · 数据 30 天自动清理</span>
-        <el-link type="primary" :underline="false" @click="goDisclaimer">《合规与免责声明》</el-link>
+        <el-link type="primary" underline="never" @click="goDisclaimer">《合规与免责声明》</el-link>
       </el-footer>
     </el-container>
   </el-container>
