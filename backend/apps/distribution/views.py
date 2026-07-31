@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.commerce.models import ServicePurchase, UserBehaviorLog
 from apps.distribution.models import (
+from apps.distribution.payout import PayoutError, PayoutService
     Commission,
     CustomerReport,
     DistributionOrder,
@@ -443,15 +444,20 @@ class AdminWithdrawalProcessView(APIView):
         if new_status not in ("approved", "rejected"):
             return Response({"detail": "无效状态"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # ?核：通? → 调?分?打款服务（第三方资金托管）；?回 → 直接更新状态
+        if new_status == "approved":
+            try:
+                result = PayoutService.process_withdrawal(wd)
+                return Response({
+                    "detail": "已打款",
+                    "payout_id": result.get("payout_id", ""),
+                    "provider": result.get("provider", ""),
+                })
+            except PayoutError as exc:
+                return Response({"detail": "打款失败: " + str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         wd.status = new_status
         wd.processed_time = timezone.now()
         wd.remark = request.data.get("remark", "")
         wd.save(update_fields=["status", "processed_time", "remark"])
-
-        # 驳回时返还已结算佣金（简单处理：重置该笔提现，不做明细回滚）
-        if new_status == "approved":
-            UserBehaviorLog.objects.create(
-                user=wd.user, action_type="withdrawal_approved",
-                action_detail={"withdrawal_id": wd.withdrawal_id, "amount": str(wd.amount)},
-            )
         return Response({"detail": "已更新：" + new_status})
