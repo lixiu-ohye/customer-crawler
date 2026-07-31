@@ -138,9 +138,22 @@ const json = (data, status = 200) => Promise.resolve({ data, status })
 
 function route(config) {
   const method = (config.method || 'get').toLowerCase()
-  const url = config.url || ''
+  let url = config.url || ''
   const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {}
-  const params = config.params || {}
+  const params = Object.assign({}, config.params || {})
+  // 兼容 URL 内嵌 query（如 /stats/distribution?kind=intent）
+  const qIdx = url.indexOf('?')
+  if (qIdx >= 0) {
+    const qs = url.substring(qIdx + 1)
+    url = url.substring(0, qIdx)
+    qs.split('&').forEach(pair => {
+      if (!pair) return
+      const eq = pair.indexOf('=')
+      const k = eq >= 0 ? pair.substring(0, eq) : pair
+      const v = eq >= 0 ? pair.substring(eq + 1) : ''
+      if (k && !(k in params)) params[k] = decodeURIComponent(v)
+    })
+  }
 
   // 认证
   if (url === '/auth/login' && method === 'post') {
