@@ -69,20 +69,31 @@ const taskChart = ref(null)
 let charts = []
 
 const render = (el, option) => {
-  if (!el) return
-  const chart = echarts.init(el)
-  charts.push(chart)
-  chart.setOption(option)
+  if (!el) { console.warn('[dashboard] chart el is null, skip render'); return }
+  try {
+    if (typeof echarts.init !== 'function') {
+      console.error('[dashboard] echarts.init is NOT a function, echarts keys:', Object.keys(echarts).slice(0, 20).join(','))
+      return
+    }
+    const chart = echarts.init(el)
+    charts.push(chart)
+    chart.setOption(option)
+    console.log('[dashboard] chart rendered OK, size:', el.clientWidth, 'x', el.clientHeight)
+  } catch (e) {
+    console.error('[dashboard] echarts render failed:', e.message, e.stack)
+  }
 }
 
 const loadDashboard = async () => {
+  console.log('[dashboard] loadDashboard start')
   const [dash, dist, trend, taskDist, intent] = await Promise.all([
     api.get('/stats/dashboard'),
-    api.get('/stats/distribution?kind=platform'),
-    api.get('/stats/trend?days=7'),
-    api.get('/stats/distribution?kind=task_status'),
-    api.get('/stats/distribution?kind=intent')
+    api.get('/stats/distribution', { params: { kind: 'platform' } }),
+    api.get('/stats/trend', { params: { days: 7 } }),
+    api.get('/stats/distribution', { params: { kind: 'task_status' } }),
+    api.get('/stats/distribution', { params: { kind: 'intent' } })
   ])
+  console.log('[dashboard] api data ok, intent:', JSON.stringify(intent).slice(0, 200))
   const d = dash.result
   cards[0].value = d.total_leads
   cards[1].value = d.high_intent_leads
