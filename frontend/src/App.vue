@@ -1,6 +1,6 @@
 <template>
   <router-view />
-  <!-- 合规同意弹窗：首次使用必须勾选同意 -->
+  <!-- 兜底合规弹窗：仅当已登录且从未签署时弹出（正常情况下登录流程已引导签署） -->
   <el-dialog v-model="showDialog" title="合规使用须知" width="640px" :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false" append-to-body>
     <div class="compliance-box">
       <el-alert type="warning" :closable="false" class="mb12" title="请在使用平台前仔细阅读以下合规须知" />
@@ -22,12 +22,15 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useAuthStore } from './stores/auth'
 
+const auth = useAuthStore()
 const showDialog = ref(false)
 const accepted = ref(false)
 
 onMounted(() => {
-  if (localStorage.getItem('disclaimerAccepted') !== '1') {
+  // 仅已登录且未签署过时弹出；登录页会引导签署，此处为兜底
+  if (auth.isLoggedIn && localStorage.getItem('disclaimerAccepted') !== '1') {
     showDialog.value = true
   }
 })
