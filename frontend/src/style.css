@@ -1,9 +1,0 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f0f2f5; }
-#app { min-height: 100vh; }
-.page-card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-.page-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #303133; }
-.flex { display: flex; align-items: center; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; }
-.mt16 { margin-top: 16px; }
-.mb16 { margin-bottom: 16px; }
