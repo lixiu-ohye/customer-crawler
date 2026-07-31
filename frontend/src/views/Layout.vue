@@ -14,6 +14,7 @@
         <el-menu-item index="/analysis"><el-icon><MagicStick /></el-icon><span>AI 分析</span></el-menu-item>
         <el-menu-item index="/member"><el-icon><Wallet /></el-icon><span>会员中心</span></el-menu-item>
         <el-menu-item index="/system"><el-icon><Setting /></el-icon><span>系统管理</span></el-menu-item>
+      <el-menu-item v-if="isDeveloper" index="/dev"><el-icon><Cpu /></el-icon><span>开发者选项</span></el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -50,10 +51,18 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import { Cpu } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
+import { computed } from 'vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+// 开发者特权：admin/admin123456 账号永久免费 + 开发者选项
+const isDeveloper = computed(() => {
+  const u = auth.user
+  return !!(u && (u.username === 'admin' || u.role_type === 'admin' || u.is_developer))
+})
 
 const goDisclaimer = () => router.push('/disclaimer')
 
