@@ -37,3 +37,21 @@ class Keyword(models.Model):
 
     def __str__(self):
         return self.word
+
+
+class PromoterIndustry(models.Model):
+    """推广员关注行业"""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="promoter_industries")
+    industry_id = models.IntegerField("行业ID")
+    industry_name = models.CharField("行业名", max_length=64)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+
+    class Meta:
+        db_table = "promoter_industries"
+        verbose_name = "推广员关注行业"
+        verbose_name_plural = verbose_name
+        unique_together = ("user", "industry_id")
+
+    def __str__(self):
+        return f"{self.user_id}-{self.industry_name}"
