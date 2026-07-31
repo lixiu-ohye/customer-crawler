@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.commerce.models import ServicePurchase, UserBehaviorLog
-from apps.distribution.models import (
 from apps.distribution.payout import PayoutError, PayoutService
+from apps.distribution.models import (
     Commission,
     CustomerReport,
     DistributionOrder,
