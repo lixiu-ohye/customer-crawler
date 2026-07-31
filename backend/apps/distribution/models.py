@@ -20,7 +20,7 @@ class Promoter(models.Model):
     invite_code = models.CharField("邀请码", max_length=32, unique=True)
     rate = models.DecimalField("返佣比例", max_digits=4, decimal_places=2, default="0.20")
     customers = models.IntegerField("推广人数", default=0)
-    withdrawn_total = models.DecimalField("累计已提现", max_digits=12, decimal_places=2, default="0")
+    withdrawn_total = models.DecimalField("累计已提现", max_digits=12, decimal_places=2, default=0)
     status = models.CharField("状态", max_length=16, choices=STATUS_CHOICES, default="active")
     freeze_reason = models.CharField("冻结原因", max_length=255, blank=True, default="")
     created_at = models.DateTimeField("申请时间", auto_now_add=True)
