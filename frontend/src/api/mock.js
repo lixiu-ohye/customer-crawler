@@ -109,6 +109,30 @@ const DISCLAIMER = `本平台提供的客户大数据采集与分析服务，旨
 1. 本声明解释权归本平台所有，平台有权根据法律法规变化适时更新本声明。
 2. 继续使用本平台即视为您已阅读并同意本声明的全部内容。`
 
+// ---------- 系统管理：用户 ----------
+const SYS_USERS = [
+  { id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', is_active: true, plan: { plan_type: 'premium', quota_used: 12, quota_total: 50000, expire_at: '2027-01-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true }, created_at: daysAgo(30) },
+  { id: 2, username: 'demo', nickname: '演示用户', email: 'demo@example.com', phone: '', role_type: 'user', is_active: true, plan: { plan_type: 'free', quota_used: 3, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false }, created_at: daysAgo(12) },
+  { id: 3, username: 'market01', nickname: '市场部小王', email: 'market@example.com', phone: '', role_type: 'user', is_active: true, plan: { plan_type: 'premium', quota_used: 45, quota_total: 50000, expire_at: '2026-12-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true }, created_at: daysAgo(20) },
+  { id: 4, username: 'sales02', nickname: '销售小李', email: 'sales@example.com', phone: '', role_type: 'user', is_active: false, plan: { plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false }, created_at: daysAgo(8) }
+]
+
+// ---------- 系统管理：参数 ----------
+const SYS_PARAMS = {
+  min_interval: 3, max_per_minute: 20, retry_times: 3,
+  high_intent_threshold: 60, retention_days: 30, mode: 'mock'
+}
+
+// ---------- 系统管理：日志 ----------
+const SYS_LOGS = [
+  ...LOGS.map(l => ({ ...l, type: 'operation' })),
+  { id: 10, type: 'crawl', action: 'crawl.douyin', detail: '抖音「装修」采集 45 条，风控正常', ip: '127.0.0.1', created_at: daysAgo(0) },
+  { id: 11, type: 'crawl', action: 'crawl.xiaohongshu', detail: '小红书「全屋定制」采集 32 条，去重后 28 条', ip: '127.0.0.1', created_at: daysAgo(1) },
+  { id: 12, type: 'crawl', action: 'crawl.weibo', detail: '微博「成都装修」采集 18 条，含 2 条广告已过滤', ip: '127.0.0.1', created_at: daysAgo(1) },
+  { id: 13, type: 'crawl', action: 'crawl.zhihu', detail: '知乎「办公室装修」问答解析 12 条', ip: '127.0.0.1', created_at: daysAgo(2) },
+  { id: 14, type: 'crawl', action: 'crawl.tieba', detail: '贴吧「旧房改造」采集 9 条，1 条触发限速等待', ip: '127.0.0.1', created_at: daysAgo(2) }
+]
+
 // ---------- Mock 路由 ----------
 const json = (data, status = 200) => Promise.resolve({ data, status })
 
@@ -329,6 +353,49 @@ function route(config) {
       return json({ results: { industry: params.industry, city: params.city || '', keywords: [...new Set(words)] } })
     }
     return json({ results: { industries: INDUSTRIES, cities: CITIES } })
+  }
+
+  // 系统管理
+  if (url === '/admin/users' && method === 'get') {
+    let list = [...SYS_USERS]
+    if (params.q) list = list.filter(u => (u.username + u.nickname).includes(params.q))
+    return json({ results: list, total: list.length })
+  }
+  if (url === '/admin/users' && method === 'post') {
+    const u = { id: SYS_USERS.length + 1, username: body.username, nickname: body.nickname || body.username, email: body.email || '', phone: '', role_type: body.role_type || 'user', is_active: true, plan: { plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false }, created_at: daysAgo(0) }
+    SYS_USERS.push(u)
+    return json({ result: u }, 201)
+  }
+  if (/^\/admin\/users\/\d+$/.test(url) && method === 'put') {
+    const id = parseInt(url.split('/')[3], 10)
+    const u = SYS_USERS.find(x => x.id === id)
+    if (u) Object.assign(u, { nickname: body.nickname, email: body.email, role_type: body.role_type })
+    return json({ result: u })
+  }
+  if (/^\/admin\/users\/\d+$/.test(url) && method === 'post') {
+    const id = parseInt(url.split('/')[3], 10)
+    const u = SYS_USERS.find(x => x.id === id)
+    if (u) u.is_active = !u.is_active
+    return json({ result: u })
+  }
+  if (url === '/admin/params' && method === 'get') {
+    return json({ result: { ...SYS_PARAMS } })
+  }
+  if (url === '/admin/params' && method === 'post') {
+    Object.assign(SYS_PARAMS, body)
+    return json({ result: { ...SYS_PARAMS } })
+  }
+  if (url === '/admin/logs') {
+    let list = [...SYS_LOGS]
+    if (params.type) list = list.filter(l => l.type === params.type)
+    return json({ results: list, total: list.length })
+  }
+  if (url === '/admin/mode' && method === 'get') {
+    return json({ result: { mode: SYS_PARAMS.mode } })
+  }
+  if (url === '/admin/mode' && method === 'post') {
+    SYS_PARAMS.mode = body.mode || 'mock'
+    return json({ result: { mode: SYS_PARAMS.mode } })
   }
 
   // 爬虫

@@ -11,9 +11,10 @@ const routes = [
       { path: 'keywords', name: 'Keywords', component: () => import('../views/Keywords.vue'), meta: { title: '关键词管理' } },
       { path: 'tasks', name: 'Tasks', component: () => import('../views/Tasks.vue'), meta: { title: '任务中心' } },
       { path: 'leads', name: 'Leads', component: () => import('../views/Leads.vue'), meta: { title: '线索库' } },
-      { path: 'heatmap', name: 'Heatmap', component: () => import('../views/Heatmap.vue'), meta: { title: '地图热力图' } },
+      { path: 'heatmap', name: 'Heatmap', component: () => import('../views/Heatmap.vue'), meta: { title: '地域热力导航' } },
       { path: 'analysis', name: 'AIAnalysis', component: () => import('../views/AIAnalysis.vue'), meta: { title: 'AI 分析' } },
       { path: 'member', name: 'MemberCenter', component: () => import('../views/MemberCenter.vue'), meta: { title: '会员中心' } },
+      { path: 'system', name: 'SystemAdmin', component: () => import('../views/SystemAdmin.vue'), meta: { title: '系统管理' } },
       { path: 'disclaimer', name: 'Disclaimer', component: () => import('../views/Disclaimer.vue'), meta: { title: '合规声明' } }
     ]
   }

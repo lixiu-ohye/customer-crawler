@@ -13,7 +13,7 @@
         <el-menu-item index="/heatmap"><el-icon><MapLocation /></el-icon><span>地图热力图</span></el-menu-item>
         <el-menu-item index="/analysis"><el-icon><MagicStick /></el-icon><span>AI 分析</span></el-menu-item>
         <el-menu-item index="/member"><el-icon><Wallet /></el-icon><span>会员中心</span></el-menu-item>
-        <el-menu-item index="/disclaimer"><el-icon><Document /></el-icon><span>合规声明</span></el-menu-item>
+        <el-menu-item index="/system"><el-icon><Setting /></el-icon><span>系统管理</span></el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -39,6 +39,10 @@
       <el-main class="main">
         <router-view />
       </el-main>
+      <el-footer class="footer">
+        <span>本平台仅用于合法合规的商业调研与客户开发 · 禁止骚扰、诈骗、侵犯隐私等违法用途 · 数据 30 天自动清理</span>
+        <el-link type="primary" :underline="false" @click="goDisclaimer">《合规与免责声明》</el-link>
+      </el-footer>
     </el-container>
   </el-container>
 </template>
@@ -50,6 +54,8 @@ import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+const goDisclaimer = () => router.push('/disclaimer')
 
 const handleCommand = async command => {
   if (command === 'member') {
@@ -73,4 +79,5 @@ const handleCommand = async command => {
 .avatar { background: #409EFF; color: #fff; font-size: 14px; }
 .mr8 { margin-right: 8px; }
 .main { padding: 16px; background: #f0f2f5; }
+.footer { height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; color: #909399; font-size: 12px; border-top: 1px solid #ebeef5; }
 </style>
