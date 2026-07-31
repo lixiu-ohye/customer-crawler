@@ -1,9 +1,10 @@
-"""关键词视图"""
+"""关键词模块视图"""
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.keywords.models import Keyword, KeywordGroup
 from apps.keywords.services import KeywordService
+from apps.keywords.views.industry_views import IndustryApplyView, IndustryLibraryView
 
 
 def _serialize(kw):
