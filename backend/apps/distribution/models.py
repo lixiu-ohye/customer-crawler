@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 """分销体系模型：推广员 / 推广海报 / 分销订单 / 佣金 / 提现 / 客户登记报表"""
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 
 
 class Promoter(models.Model):
@@ -20,6 +20,7 @@ class Promoter(models.Model):
     invite_code = models.CharField("邀请码", max_length=32, unique=True)
     rate = models.DecimalField("返佣比例", max_digits=4, decimal_places=2, default="0.20")
     customers = models.IntegerField("推广人数", default=0)
+    withdrawn_total = models.DecimalField("累计已提现", max_digits=12, decimal_places=2, default="0")
     status = models.CharField("状态", max_length=16, choices=STATUS_CHOICES, default="active")
     freeze_reason = models.CharField("冻结原因", max_length=255, blank=True, default="")
     created_at = models.DateTimeField("申请时间", auto_now_add=True)
@@ -40,13 +41,14 @@ class Promoter(models.Model):
 
     @property
     def withdrawable(self):
-        """可提现（已结算）"""
+        """可提现（已结算 - 已提现）"""
         agg = self.commissions.filter(status="paid").aggregate(total=models.Sum("amount"))
-        return agg["total"] or 0
+        total = agg["total"] or 0
+        return total - (self.withdrawn_total or 0)
 
 
 class PromoPoster(models.Model):
-    """推广海报（含 0.01 元体验包参数）"""
+    """推广海报（含 0.01 元体验包订单）"""
 
     promoter = models.ForeignKey(Promoter, on_delete=models.CASCADE, related_name="posters")
     title = models.CharField("海报标题", max_length=128, default="客户大数据平台")
@@ -65,7 +67,7 @@ class PromoPoster(models.Model):
 
 
 class DistributionOrder(models.Model):
-    """分销订单（0.01 元体验包订单 / 升级订单）"""
+    """分销订单（0.01 元体验包订单 / 升级套餐）"""
 
     STATUS_CHOICES = (
         ("pending", "待支付"),
@@ -153,7 +155,7 @@ class Withdrawal(models.Model):
         ("alipay", "支付宝"),
     )
 
-    withdrawal_id = models.CharField("提现编号", max_length=64, unique=True)
+    withdrawal_id = models.CharField("提现单号", max_length=64, unique=True)
     promoter = models.ForeignKey(
         Promoter, on_delete=models.CASCADE, related_name="withdrawals", verbose_name="推广员",
     )
@@ -164,6 +166,7 @@ class Withdrawal(models.Model):
     amount = models.DecimalField("提现金额", max_digits=10, decimal_places=2)
     channel = models.CharField("收款渠道", max_length=16, choices=CHANNEL_CHOICES, default="wechat")
     status = models.CharField("状态", max_length=16, choices=STATUS_CHOICES, default="pending")
+    payout_id = models.CharField("分账流水号", max_length=64, blank=True, default="")
     remark = models.CharField("备注", max_length=255, blank=True, default="")
     request_time = models.DateTimeField("申请时间", auto_now_add=True)
     processed_time = models.DateTimeField("处理时间", null=True, blank=True)
@@ -190,7 +193,7 @@ class CustomerReport(models.Model):
     identity_subject = models.CharField("实名主体", max_length=64, blank=True, default="")
     plan_status = models.CharField("套餐", max_length=32, blank=True, default="")
     customer_contact = models.CharField("联系方式", max_length=64, blank=True, default="")
-    device_ip = models.GenericIPAddressField("设备 IP", null=True, blank=True)
+    device_ip = models.GenericIPAddressField("注册 IP", null=True, blank=True)
     registration_time = models.DateTimeField("注册时间", auto_now_add=True)
     payment_channel = models.CharField("支付渠道", max_length=16, blank=True, default="")
     payment_history = models.IntegerField("支付次数", default=0)
