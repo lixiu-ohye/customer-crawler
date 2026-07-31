@@ -4,12 +4,14 @@ from django.urls import path
 from apps.keywords.views import (
     IndustryApplyView,
     IndustryLibraryView,
+    IndustryNavView,
     KeywordBulkView,
     KeywordDetailView,
     KeywordExpandView,
     KeywordGroupView,
     KeywordListView,
     KeywordSuggestView,
+    PromoterIndustryView,
 )
 
 urlpatterns = [
@@ -20,5 +22,7 @@ urlpatterns = [
     path("groups", KeywordGroupView.as_view()),
     path("industry-library", IndustryLibraryView.as_view()),
     path("industry-apply", IndustryApplyView.as_view()),
+    path("industry-nav", IndustryNavView.as_view()),
+    path("promoter-industries", PromoterIndustryView.as_view()),
     path("<int:pk>", KeywordDetailView.as_view()),
 ]
