@@ -76,11 +76,12 @@ const render = (el, option) => {
 }
 
 const loadDashboard = async () => {
-  const [dash, dist, trend, taskDist] = await Promise.all([
+  const [dash, dist, trend, taskDist, intent] = await Promise.all([
     api.get('/stats/dashboard'),
     api.get('/stats/distribution?kind=platform'),
     api.get('/stats/trend?days=7'),
-    api.get('/stats/distribution?kind=task_status')
+    api.get('/stats/distribution?kind=task_status'),
+    api.get('/stats/distribution?kind=intent')
   ])
   const d = dash.result
   cards[0].value = d.total_leads
@@ -107,25 +108,9 @@ const loadDashboard = async () => {
       series: [{
         type: 'pie',
         radius: ['40%', '65%'],
-        data: taskDist.length || dist.results.length ? [] : [],
+        data: intent.results.length ? intent.results : [{ name: '暂无数据', value: 1 }],
         label: { formatter: '{b}: {c}' }
-      }],
-      backgroundColor: 'transparent'
-    })
-    // 意向分布单独请求
-    api.get('/stats/distribution?kind=intent').then(r => {
-      charts.forEach(c => c.dispose())
-      charts = []
-      render(intentChart.value, {
-        tooltip: { trigger: 'item' },
-        legend: { bottom: 0 },
-        series: [{
-          type: 'pie',
-          radius: ['40%', '65%'],
-          data: r.results.length ? r.results : [{ name: '暂无数据', value: 1 }],
-          label: { formatter: '{b}: {c}' }
-        }]
-      })
+      }]
     })
     render(trendChart.value, {
       tooltip: { trigger: 'axis' },
