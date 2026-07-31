@@ -15,8 +15,8 @@
         </div>
       </div>
 
-      <!-- 行业地点导航 -->
-      <el-divider content-position="left">行业地点导航 · 自动联想</el-divider>
+      <!-- 行业地域导航 -->
+      <el-divider content-position="left">行业地域导航 · 自动联想</el-divider>
       <div class="flex" style="gap: 8px; flex-wrap: wrap">
         <el-select v-model="navIndustry" filterable placeholder="选择行业" style="width: 200px" @change="loadNav">
           <el-option v-for="ind in industries" :key="ind" :label="ind" :value="ind" />
@@ -25,7 +25,39 @@
           <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
         </el-select>
         <el-tag v-for="kw in navKeywords" :key="kw" closable @close="addFromNav(kw)" style="cursor: pointer">{{ kw }}</el-tag>
-        <span v-if="navKeywords.length" style="font-size: 12px; color: #909399">点击标签添加为关键词</span>
+        <span v-if="navKeywords.length" style="font-size: 12px; color: #909399">点击标签即可添加关键词</span>
+      </div>
+
+      <!-- 行业词库（12 大行业） -->
+      <el-divider content-position="left">行业词库 · 12 大行业精选词（一键导入）</el-divider>
+      <div class="flex" style="gap: 8px; flex-wrap: wrap; margin-bottom: 12px">
+        <el-select v-model="libIndustry" filterable placeholder="选择行业词库" style="width: 220px" @change="loadLibrary">
+          <el-option v-for="ind in libIndustries" :key="ind" :label="ind" :value="ind" />
+        </el-select>
+        <el-button v-if="libIndustry" type="warning" :loading="applying" @click="applyLibrary">
+          一键导入「{{ libIndustry }}」
+        </el-button>
+        <span v-if="libIndustry" style="font-size: 12px; color: #909399">
+          共 {{ libMainWords.length + libLongTailWords.length }} 词 · 自动分组「行业词库-{{ libIndustry }}」
+        </span>
+      </div>
+      <div v-if="libIndustry" class="lib-box">
+        <div class="lib-row">
+          <span class="lib-label">主词</span>
+          <el-tag v-for="w in libMainWords" :key="w" type="primary" class="mr4 mb4" closable @close="addLibWord(w)">{{ w }}</el-tag>
+        </div>
+        <div class="lib-row">
+          <span class="lib-label">长尾词</span>
+          <el-tag v-for="w in libLongTailWords" :key="w" type="success" class="mr4 mb4" closable @close="addLibWord(w)">{{ w }}</el-tag>
+        </div>
+        <div class="lib-row">
+          <span class="lib-label">行业否定词</span>
+          <el-tag v-for="w in libNegativeWords" :key="w" type="info" class="mr4 mb4">{{ w }}</el-tag>
+        </div>
+        <div class="lib-row" v-if="libGlobalNegative.length">
+          <span class="lib-label">全局否定词</span>
+          <el-tag v-for="w in libGlobalNegative" :key="w" type="danger" effect="plain" class="mr4 mb4">{{ w }}</el-tag>
+        </div>
       </div>
 
       <el-table :data="list" v-loading="loading" class="mt16" stripe>
@@ -120,6 +152,15 @@ const navIndustry = ref('')
 const navCity = ref('')
 const navKeywords = ref([])
 
+// 行业词库
+const libIndustries = ref([])
+const libIndustry = ref('')
+const libMainWords = ref([])
+const libLongTailWords = ref([])
+const libNegativeWords = ref([])
+const libGlobalNegative = ref([])
+const applying = ref(false)
+
 // AI 拓词
 const expandVisible = ref(false)
 const expanding = ref(false)
@@ -160,6 +201,44 @@ const addFromNav = async kw => {
   await api.post('/keywords/', { word: kw })
   ElMessage.success(`已添加「${kw}」`)
   load()
+}
+
+// ---------- 行业词库 ----------
+const loadLibraryList = async () => {
+  try {
+    const data = await api.get('/keywords/industry-library')
+    libIndustries.value = data.result.industries
+  } catch (e) {
+    libIndustries.value = []
+  }
+}
+
+const loadLibrary = async () => {
+  if (!libIndustry.value) return
+  const data = await api.get('/keywords/industry-library', { params: { industry: libIndustry.value } })
+  libMainWords.value = data.result.mainWords || []
+  libLongTailWords.value = data.result.longTailWords || []
+  libNegativeWords.value = data.result.negativeWords || []
+  libGlobalNegative.value = data.result.globalNegativeWords || []
+}
+
+const addLibWord = async w => {
+  await api.post('/keywords/', { word: w, negative_words: libNegativeWords.value.join(',') })
+  ElMessage.success(`已添加「${w}」`)
+  load()
+}
+
+const applyLibrary = async () => {
+  if (!libIndustry.value) return
+  applying.value = true
+  try {
+    const data = await api.post('/keywords/industry-apply', { industry: libIndustry.value })
+    ElMessage.success(`已导入 ${data.result.created} 个词（跳过 ${data.result.skipped} 个重复）`)
+    load()
+    loadGroups()
+  } finally {
+    applying.value = false
+  }
 }
 
 const openAdd = () => {
@@ -231,10 +310,31 @@ onMounted(() => {
   load()
   loadGroups()
   loadNavData()
+  loadLibraryList()
 })
 </script>
 
 <style scoped>
 .mr4 { margin-right: 4px; }
 .mb4 { margin-bottom: 4px; }
+.lib-box {
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fafafa;
+}
+.lib-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.lib-label {
+  flex: 0 0 90px;
+  font-size: 13px;
+  color: #606266;
+  font-weight: 600;
+  padding-top: 4px;
+}
 </style>
