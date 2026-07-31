@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=promotion_system
+      - YUNGOU_API_KEY=${YUNGOU_API_KEY}
+      - YUNGOU_SECRET=${YUNGOU_SECRET}
+      - PLATFORM_ACCOUNT=${PLATFORM_ACCOUNT}
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: promotion_system
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "3306:3306"
+
+volumes:
+  db_data:
