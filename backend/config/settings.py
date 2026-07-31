@@ -32,6 +32,11 @@ INSTALLED_APPS = [
     "apps.analytics",
     "apps.stats",
     "apps.core",
+    "apps.biz",
+    "apps.crm",
+    "apps.monitor",
+    "apps.commerce",
+    "apps.distribution",
 ]
 
 MIDDLEWARE = [

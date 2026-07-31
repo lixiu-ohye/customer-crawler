@@ -70,6 +70,9 @@
         <el-button type="primary" :disabled="!selectedPlan" @click="doUpgrade">确认升级</el-button>
       </template>
     </el-dialog>
+
+    <!-- 支付前合规告知弹窗 -->
+    <PaymentConfirm v-model="payVisible" :title="'升级至' + (selectedPlan?.name || '') + '套餐'" :amount-text="selectedPlan?.price || ''" @confirm="doPay" />
   </div>
 </template>
 
@@ -77,6 +80,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+import PaymentConfirm from '../components/PaymentConfirm.vue'
 
 const profile = reactive({ username: '', nickname: '', email: '', phone: '' })
 const plan = reactive({ plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false })
@@ -84,6 +88,7 @@ const logs = ref([])
 const saving = ref(false)
 const upgradeVisible = ref(false)
 const selectedPlan = ref(null)
+const payVisible = ref(false)
 const plans = [
   { name: '专业版', quota: 10000, concurrent: 5, price: '¥199/月', desc: '适合中小企业', value: 'pro' },
   { name: '旗舰版', quota: 50000, concurrent: 20, price: '¥599/月', desc: '适合批量获客团队', value: 'premium' }
@@ -115,7 +120,12 @@ const upgrade = () => {
 }
 
 const doUpgrade = async () => {
-  await ElMessageBox.confirm(`确认升级到${selectedPlan.value.name}？`, '提示', { type: 'info' })
+  // 先弹合规支付确认，用户同意后走 doPay
+  payVisible.value = true
+}
+
+const doPay = async () => {
+  await ElMessageBox.confirm(`确认支付升级到${selectedPlan.value.name}？`, '支付确认', { type: 'info' })
   await api.post('/auth/plan', { plan_type: selectedPlan.value.value })
   ElMessage.success('升级成功')
   upgradeVisible.value = false

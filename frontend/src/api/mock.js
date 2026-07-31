@@ -707,7 +707,13 @@ function route(config) {
     const order = { id: 'ord_' + Date.now(), user: body.username || 'new_user', plan: 'trial', amount: 0.01, channel: body.channel || 'wechat', status: 'paid', created_at: daysAgo(0) }
     PROMOTION_DATA.orders.push(order)
     poster.customers += 1
-    return json({ success: true, message: '注册成功', orderId: order.id }, 201)
+    return json({
+      success: true,
+      message: '注册成功，已开通 0.01 元体验包',
+      orderId: order.id,
+      token: 'mock-trial-token-' + Date.now(),
+      user: { id: 100 + poster.customers, username: body.username || 'new_user', plan: 'trial' }
+    }, 201)
   }
 
   // ---------- ??者?后台 ----------
@@ -731,7 +737,16 @@ function route(config) {
     p.freeze_reason = body.reason || '违?操作'
     return json({ detail: '推?员已?结：' + p.name })
   }
-  if (url === '/admin/withdrawals' && method === 'get') {
+  
+  if (url === '/promotion/pay' && method === 'post') {
+    const oid = body.orderId || ''
+    const order = PROMOTION_DATA.orders.find(x => x.id === oid)
+    if (!order) return json({ detail: '订单不存在' }, 404)
+    order.status = 'paid'
+    return json({ detail: '支付成功，体验包已开通', orderId: oid })
+  }
+
+if (url === '/admin/withdrawals' && method === 'get') {
     return json({ results: PROMOTION_DATA.withdrawals })
   }
   if (url.startsWith('/admin/withdrawal/') && method === 'post') {

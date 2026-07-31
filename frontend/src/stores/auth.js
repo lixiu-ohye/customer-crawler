@@ -19,7 +19,17 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user', JSON.stringify(data.user))
       return data
     },
-    async register(username, password, email) {
+    async register(username, password, email, promoter = '') {
+      // promoter 参数：0.01 元体验包经推广海报注册（走 /promotion/register）
+      if (promoter) {
+        const data = await api.post('/promotion/register', { username, password, email, promoter })
+        this.token = data.token
+        this.user = data.user || { username, plan: 'trial' }
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(this.user))
+        if (data.orderId) localStorage.setItem('trialOrderId', data.orderId)
+        return data
+      }
       const data = await api.post('/auth/register', { username, password, email })
       this.token = data.token
       this.user = data.user

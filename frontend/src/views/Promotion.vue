@@ -45,6 +45,8 @@
           <el-button type="primary" class="mt12" :disabled="!(stats.withdrawable > 0)" @click="applyWithdraw">
             申请提现
           </el-button>
+        <!-- 提现前合规确认 -->
+        <PaymentConfirm v-model="withdrawPayVisible" title="佣金提现" :amount-text="'￥' + (withdrawAmount || '0')" @confirm="doWithdraw" />
         </el-card>
       </el-col>
 
@@ -77,6 +79,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useAuthStore } from '../stores/auth'
+import PaymentConfirm from '../components/PaymentConfirm.vue'
 
 const auth = useAuthStore()
 const promoter = ref(null)
@@ -123,12 +126,21 @@ const applyPromoter = async () => {
   }
 }
 
+const withdrawPayVisible = ref(false)
+const withdrawAmount = ref('0')
+
 const applyWithdraw = async () => {
   const { value } = await ElMessageBox.prompt('请输入提现金额（元）', '申请提现', {
     inputValue: String(stats.value.withdrawable || 0)
   })
+  // 资金操作前合规确认
+  withdrawAmount.value = value
+  withdrawPayVisible.value = true
+}
+
+const doWithdraw = async () => {
   try {
-    const res = await api.post('/promotion/withdraw', { amount: parseFloat(value), channel: 'wechat' })
+    const res = await api.post('/promotion/withdraw', { amount: parseFloat(withdrawAmount.value), channel: 'wechat' })
     ElMessage.success(res.detail || '提现申请已提交')
   } catch (e) {
     ElMessage.error(e.response?.data?.detail || '提现失败')
