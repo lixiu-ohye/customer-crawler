@@ -15,6 +15,7 @@
         <el-menu-item index="/member"><el-icon><Wallet /></el-icon><span>会员中心</span></el-menu-item>
         <el-menu-item index="/system"><el-icon><Setting /></el-icon><span>系统管理</span></el-menu-item>
       <el-menu-item v-if="isDeveloper" index="/dev"><el-icon><Cpu /></el-icon><span>开发者选项</span></el-menu-item>
+      <el-menu-item v-if="isDeveloper" index="/devadmin"><el-icon><DataAnalysis /></el-icon><span>开发者总后台</span></el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -45,15 +46,18 @@
         <el-link type="primary" underline="never" @click="goDisclaimer">《合规与免责声明》</el-link>
       </el-footer>
     </el-container>
+    <!-- 全站悬浮推广气泡 -->
+    <FloatingBubble />
   </el-container>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { Cpu } from '@element-plus/icons-vue'
+import { Cpu, DataAnalysis } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { computed } from 'vue'
+import FloatingBubble from '../components/FloatingBubble.vue'
 
 const router = useRouter()
 const auth = useAuthStore()

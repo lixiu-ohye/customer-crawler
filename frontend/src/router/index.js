@@ -16,6 +16,8 @@ const routes = [
       { path: 'member', name: 'MemberCenter', component: () => import('../views/MemberCenter.vue'), meta: { title: '会员中心' } },
       { path: 'system', name: 'SystemAdmin', component: () => import('../views/SystemAdmin.vue'), meta: { title: '系统管理' } },
       { path: 'dev', name: 'DeveloperOptions', component: () => import('../views/DeveloperOptions.vue'), meta: { title: '开发者选项', requiresDev: true } },
+      { path: 'devadmin', name: 'DeveloperAdmin', component: () => import('../views/DeveloperAdmin.vue'), meta: { title: '开发者总后台', requiresDev: true } },
+      { path: 'promotion', name: 'Promotion', component: () => import('../views/Promotion.vue'), meta: { title: '推广活动' } },
       { path: 'disclaimer', name: 'Disclaimer', component: () => import('../views/Disclaimer.vue'), meta: { title: '合规声明' } }
     ]
   }

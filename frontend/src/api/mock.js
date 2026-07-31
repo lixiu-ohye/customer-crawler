@@ -136,6 +136,156 @@ const SYS_LOGS = [
 // ---------- Mock 路由 ----------
 const json = (data, status = 200) => Promise.resolve({ data, status })
 
+
+// ---------- 商业化: 5 档套餐 ----------
+const PLANS = [
+  { id: 'free', name: '免费试用版', price: 0, yearly_price: 0, tag: '引流款', features: { concurrent_tasks: 1, daily_leads: 30, ai_summary: 10, ai_copy: 5, export_limit: 50, monitoring: 0, templates: 0, heatmap: false, sub_accounts: 0, lead_lock: false }, restrictions: { crawl_speed: '低速15分钟间隔', keyword_limit: 20, lead_masking: '轻度脱敏', retention: '7天' } },
+  { id: 'basic', name: '简易创业体验版', price: 59, yearly_price: 599, tag: '兼职过渡', features: { concurrent_tasks: 3, daily_leads: 180, ai_summary: 150, ai_copy: 80, export_limit: 1000, monitoring: 2, templates: 1, heatmap: '简易', sub_accounts: 0, lead_lock: false }, restrictions: { regional: '无区县过滤', support: '无优先客服' } },
+  { id: 'standard', name: '小微个体户盈利版', price: 199, yearly_price: 1999, tag: '主力盈利', features: { concurrent_tasks: 10, daily_leads: 800, ai_monthly: 50000, export_limit: 10000, monitoring: -1, templates: -1, heatmap: '完整', sub_accounts: 1, lead_lock: true }, restrictions: { data_reports: false, operation_service: false }, yearly_bonus: '赠3个月小额扩容包' },
+  { id: 'professional', name: '企业团队尊享版', price: 399, yearly_price: 3999, tag: '高利润核心', features: { concurrent_tasks: 25, daily_leads: 3000, ai_monthly: 150000, export_limit: 100000, monitoring: -1, templates: -1, heatmap: '完整', sub_accounts: 6, lead_lock: true, data_reports: true, operation_service: true }, restrictions: { permission_levels: false, private_deploy: false }, yearly_bonus: '赠3个月大额扩容包+15天AI高级文案' },
+  { id: 'enterprise', name: '机构定制大客户版', price: 7288, yearly_price: 7288, tag: '机构大客户', features: { concurrent_tasks: -1, daily_leads: 10000, ai_monthly: -1, export_limit: -1, monitoring: -1, templates: 'custom', heatmap: '完整', sub_accounts: -1, lead_lock: true, data_reports: true, operation_service: true, permission_levels: true, private_deploy: true }, restrictions: {}, addons: { branding: 1800 } }
+]
+const ADDON_SERVICES = [
+  { code: 'lead_expansion_small', name: '小额线索扩容包', desc: '+300条/日', price: 49, type: 'monthly' },
+  { code: 'lead_expansion_large', name: '大额线索扩容包', desc: '+1200条/日', price: 129, type: 'monthly' },
+  { code: 'ai_copy', name: 'AI高级文案包', desc: '高级营销文案生成', price: 39, type: 'monthly' },
+  { code: 'ai_analysis', name: 'AI线索深度研判包', desc: '客户需求分层研判', price: 59, type: 'monthly' },
+  { code: 'data_backup', name: '月度云端线索自动备份', desc: '每月自动云端备份', price: 59, type: 'monthly' },
+  { code: 'lead_lock', name: '永久锁定线索', desc: '突破30天自动清理', price: 79, type: 'monthly' },
+  { code: 'custom_templates', name: '细分行业专属词库定制', desc: '按行业定制词库', price: 129, type: 'one_time' },
+  { code: 'kw_optimize', name: '精细化否定词库优化', desc: '优化无效关键词过滤', price: 89, type: 'one_time' },
+  { code: 'data_archive', name: '批量历史线索归档打包', desc: '历史数据整理与打包', price: 69, type: 'one_time' },
+  { code: 'operation_support', name: '全年1v1运营陪跑', desc: '季度策略指导+全年调参', price: 1280, type: 'enterprise' }
+]
+const COUPONS = [
+  { code: 'firstPurchase_30', name: '新人首充立减30', discount: 30, min_amount: 59, expiry_days: 30 },
+  { code: 'upgradeFrom199', name: '199元用户升级优惠', discount: 100, min_amount: 399, expiry_days: 15 }
+]
+
+// ---------- 实名认证状态 ----------
+const REALNAME_STATUS = { authenticated: true, real_name: '张**', id_card_md5: 'a1b2c3***', face_verified: true, auth_date: '2026-07-01', plan_locked: false }
+
+// ---------- B2B 企业库演示数据 ----------
+const BIZ_COMPANIES = [
+  { id: 1, name: '苏州精工机械制造有限公司', credit_code: '91320594MA1X2Y3Z4A', legal_person: '王建国', reg_date: '2021-03-15', capital: 500, status: '在业', province: '江苏', city: '苏州', district: '吴中区', industry_l3: '机械加工', channel_type: '工厂', insured_count: 32, recruit_cnt_30d: 4, tender_cnt_90d: 3, patent_cnt: 12, last_tender_date: '2026-07-20', last_recruit_date: '2026-07-25', lng: 120.62, lat: 31.25, product_tags: ['CNC加工', '精密零件'], intent_score: 86, contact_count: 2, top_contact: { name: '李采购', role: '采购经理', role_score: 0.85 } },
+  { id: 2, name: '东莞市鑫达五金制品厂', credit_code: '91441900MA5A1B2C3D', legal_person: '陈志强', reg_date: '2019-08-01', capital: 200, status: '在业', province: '广东', city: '东莞', district: '长安镇', industry_l3: '五金制品', channel_type: '工厂', insured_count: 18, recruit_cnt_30d: 2, tender_cnt_90d: 1, patent_cnt: 3, last_tender_date: '2026-07-28', last_recruit_date: '2026-07-10', lng: 113.80, lat: 22.82, product_tags: ['五金冲压', '模具'], intent_score: 74, contact_count: 1, top_contact: { name: '刘厂长', role: '总经理', role_score: 0.92 } },
+  { id: 3, name: '杭州云栖科技有限公司', credit_code: '91330106MA2B3C4D5E', legal_person: '周晓芸', reg_date: '2022-01-10', capital: 1000, status: '在业', province: '浙江', city: '杭州', district: '西湖区', industry_l3: '软件服务', channel_type: '网店', insured_count: 45, recruit_cnt_30d: 8, tender_cnt_90d: 5, patent_cnt: 20, last_tender_date: '2026-07-30', last_financing_date: '2026-06-15', lng: 120.13, lat: 30.27, product_tags: ['SaaS', '企业服务'], intent_score: 91, contact_count: 3, top_contact: { name: '张总', role: '创始人', role_score: 0.95 } },
+  { id: 4, name: '成都蜀香食品有限公司', credit_code: '91510107MA1C2D3E4F', legal_person: '赵敏', reg_date: '2015-05-20', capital: 800, status: '在业', province: '四川', city: '成都', district: '武侯区', industry_l3: '食品加工', channel_type: '工厂', insured_count: 120, recruit_cnt_30d: 6, tender_cnt_90d: 0, patent_cnt: 8, last_recruit_date: '2026-07-18', lng: 104.06, lat: 30.57, product_tags: ['火锅底料', '调味品'], intent_score: 58, contact_count: 1, top_contact: { name: '王经理', role: '行政主管', role_score: 0.45 } },
+  { id: 5, name: '北京启航教育科技有限公司', credit_code: '91110108MA2E3F4G5H', legal_person: '孙丽', reg_date: '2020-09-01', capital: 300, status: '在业', province: '北京', city: '北京', district: '海淀区', industry_l3: '教育培训', channel_type: '网店', insured_count: 28, recruit_cnt_30d: 3, tender_cnt_90d: 2, patent_cnt: 0, last_tender_date: '2026-07-22', lng: 116.31, lat: 39.98, product_tags: ['职业教育', '在线课程'], intent_score: 62, contact_count: 2, top_contact: { name: '李校长', role: '校长', role_score: 0.78 } },
+  { id: 6, name: '佛山市顺德区宏远电器厂', credit_code: '91440606MA3A4B5C6D', legal_person: '黄伟', reg_date: '2018-11-11', capital: 150, status: '在业', province: '广东', city: '佛山', district: '顺德区', industry_l3: '家电配件', channel_type: '工厂', insured_count: 55, recruit_cnt_30d: 5, tender_cnt_90d: 4, patent_cnt: 15, last_tender_date: '2026-07-29', last_recruit_date: '2026-07-26', lng: 113.28, lat: 22.81, product_tags: ['小家电', '注塑件'], intent_score: 79, contact_count: 2, top_contact: { name: '何生', role: '采购总监', role_score: 0.88 } },
+  { id: 7, name: '上海澜海物流有限公司', credit_code: '91310115MA4B5C6D7E', legal_person: '徐海涛', reg_date: '2016-03-03', capital: 2000, status: '在业', province: '上海', city: '上海', district: '浦东新区', industry_l3: '物流运输', channel_type: '经销商', insured_count: 210, recruit_cnt_30d: 12, tender_cnt_90d: 6, patent_cnt: 2, last_tender_date: '2026-07-31', last_recruit_date: '2026-07-28', lng: 121.54, lat: 31.22, product_tags: ['冷链物流', '仓储'], intent_score: 67, contact_count: 1, top_contact: { name: '陈经理', role: '运营经理', role_score: 0.52 } },
+  { id: 8, name: '武汉光谷光电技术有限公司', credit_code: '91420100MA5C6D7E8F', legal_person: '刘洋', reg_date: '2021-06-06', capital: 1200, status: '在业', province: '湖北', city: '武汉', district: '洪山区', industry_l3: '光电设备', channel_type: '工厂', insured_count: 38, recruit_cnt_30d: 7, tender_cnt_90d: 3, patent_cnt: 25, last_tender_date: '2026-07-19', lng: 114.41, lat: 30.50, product_tags: ['激光设备', '光学元件'], intent_score: 83, contact_count: 2, top_contact: { name: '吴总', role: '技术总监', role_score: 0.81 } },
+  { id: 9, name: '深圳市星辰电子商务有限公司', credit_code: '91440300MA6D7E8F9G', legal_person: '林晓星', reg_date: '2022-12-12', capital: 100, status: '在业', province: '广东', city: '深圳', district: '南山区', industry_l3: '电商运营', channel_type: '网店', insured_count: 15, recruit_cnt_30d: 4, tender_cnt_90d: 0, patent_cnt: 0, last_recruit_date: '2026-07-15', lng: 113.93, lat: 22.54, product_tags: ['跨境电商', '品牌代运营'], intent_score: 55, contact_count: 1, top_contact: { name: '林总', role: '创始人', role_score: 0.90 } },
+  { id: 10, name: '郑州中原建工集团有限公司', credit_code: '91410100MA7E8F9G0H', legal_person: '郭铁柱', reg_date: '2010-04-08', capital: 5000, status: '在业', province: '河南', city: '郑州', district: '金水区', industry_l3: '建筑工程', channel_type: '经销商', insured_count: 350, recruit_cnt_30d: 15, tender_cnt_90d: 8, patent_cnt: 30, last_tender_date: '2026-07-30', last_recruit_date: '2026-07-27', lng: 113.65, lat: 34.76, product_tags: ['市政工程', '装饰装修'], intent_score: 71, contact_count: 3, top_contact: { name: '马工', role: '项目负责人', role_score: 0.76 } },
+  { id: 11, name: '长沙湘江新材料有限公司', credit_code: '91430100MA8F9G0H1I', legal_person: '彭伟', reg_date: '2017-07-07', capital: 600, status: '在业', province: '湖南', city: '长沙', district: '岳麓区', industry_l3: '新材料', channel_type: '工厂', insured_count: 42, recruit_cnt_30d: 3, tender_cnt_90d: 2, patent_cnt: 18, last_tender_date: '2026-07-21', lng: 112.94, lat: 28.23, product_tags: ['复合材料', '防水材料'], intent_score: 64, contact_count: 1, top_contact: { name: '杨主任', role: '办公室主任', role_score: 0.41 } },
+  { id: 12, name: '青岛蓝海水产养殖有限公司', credit_code: '91370200MA9G0H1I2J', legal_person: '于大海', reg_date: '2014-02-14', capital: 300, status: '在业', province: '山东', city: '青岛', district: '黄岛区', industry_l3: '水产养殖', channel_type: '工厂', insured_count: 25, recruit_cnt_30d: 1, tender_cnt_90d: 0, patent_cnt: 4, last_recruit_date: '2026-07-05', lng: 120.19, lat: 36.07, product_tags: ['海参养殖', '生鲜供应链'], intent_score: 49, contact_count: 0, top_contact: null }
+]
+const BIZ_TEMPLATES = [
+  { id: 1, name: '机械加工高意向', industry: '机械加工', conditions: '成立1-3年 + 参保10-50人 + 近30天招标 + 机械加工', is_public: true, usage_count: 128 },
+  { id: 2, name: '厂房装修需求', industry: '装修工程', conditions: '成立1-5年 + 近30天招聘 + 广东', is_public: true, usage_count: 86 },
+  { id: 3, name: '光电设备采购潮', industry: '光电设备', conditions: '专利≥10 + 近90天招标≥3 + 湖北', is_public: false, usage_count: 32 }
+]
+
+// ---------- 短视频询盘演示数据 ----------
+const INQUIRIES = [
+  { id: 1, uid: 'dy_88213', nickname: '装修小王', platform: 'douyin', content: '老板这厂房装修多少钱一平？我家1200平想翻新', hit_keyword: '多少钱', source_video: '厂房装修实拍案例', video_id: 'v_72901', fan_cnt: 320, region: '广东东莞', intent_score: 0.92, status: 'to_touch', comment_time: daysAgo(0) },
+  { id: 2, uid: 'dy_77102', nickname: '机械加工李哥', platform: 'douyin', content: '你们能加工铝件吗？有图纸想找厂家', hit_keyword: '厂家', source_video: 'CNC精密加工现场', video_id: 'v_72887', fan_cnt: 1200, region: '江苏苏州', intent_score: 0.88, status: 'dm_sent', comment_time: daysAgo(0) },
+  { id: 3, uid: 'ks_55671', nickname: '五金店老陈', platform: 'kuaishou', content: '求推荐靠谱的供应商，我们做五金批发的', hit_keyword: '求推荐', source_video: '五金制品生产线', video_id: 'v_72855', fan_cnt: 58, region: '河北保定', intent_score: 0.85, status: 'to_touch', comment_time: daysAgo(1) },
+  { id: 4, uid: 'dy_66420', nickname: '设计工作室阿凯', platform: 'douyin', content: '怎么联系你们？有个展厅项目想咨询', hit_keyword: '怎么联系', source_video: '展厅设计案例合集', video_id: 'v_72830', fan_cnt: 860, region: '浙江杭州', intent_score: 0.81, status: 'dm_sent', comment_time: daysAgo(1) },
+  { id: 5, uid: 'sp_44198', nickname: '工厂主老周', platform: 'shipinhao', content: '想了解定制方案，有报价单吗？', hit_keyword: '报价', source_video: '工厂改造升级指南', video_id: 'v_72801', fan_cnt: 45, region: '山东青岛', intent_score: 0.78, status: 'card_pushed', comment_time: daysAgo(2) },
+  { id: 6, uid: 'dy_33815', nickname: '创业小白', platform: 'douyin', content: '同行做得不错，学习一下', hit_keyword: '', source_video: '行业趋势分析', video_id: 'v_72780', fan_cnt: 210, region: '福建厦门', intent_score: 0.35, status: 'filtered_ad', comment_time: daysAgo(2) },
+  { id: 7, uid: 'ks_22093', nickname: '装修师傅阿贵', platform: 'kuaishou', content: '多少钱一平方？包工包料吗', hit_keyword: '多少钱', source_video: '厂房环氧地坪施工', video_id: 'v_72760', fan_cnt: 66, region: '江苏常州', intent_score: 0.90, status: 'to_touch', comment_time: daysAgo(3) },
+  { id: 8, uid: 'dy_11876', nickname: '采购助理小刘', platform: 'douyin', content: '我们公司在找供应商，方便留个联系方式吗', hit_keyword: '联系方式', source_video: '精密零件加工展示', video_id: 'v_72740', fan_cnt: 430, region: '四川成都', intent_score: 0.94, status: 'converted', comment_time: daysAgo(3) }
+]
+const MONITOR_TARGETS = [
+  { id: 1, target_type: 'video', target_id: 'v_72901', platform: 'douyin', title: '厂房装修实拍案例', status: 'active', last_pull_time: daysAgo(0), comments_total: 324, high_intent: 12 },
+  { id: 2, target_type: 'competitor_account', target_id: 'acc_7788', platform: 'douyin', title: '竞品@机械加工王总', status: 'active', last_pull_time: daysAgo(0), comments_total: 1089, high_intent: 45 },
+  { id: 3, target_type: 'live_room', target_id: 'live_5566', platform: 'kuaishou', title: '五金工具直播间', status: 'paused', last_pull_time: daysAgo(2), comments_total: 540, high_intent: 8 },
+  { id: 4, target_type: 'video', target_id: 'v_72887', platform: 'douyin', title: 'CNC精密加工现场', status: 'active', last_pull_time: daysAgo(0), comments_total: 208, high_intent: 9 }
+]
+const ACCOUNTS = [
+  { id: 1, platform: 'douyin', name: '运营号A', status: 'active', health: 0.95, today_sent: 8, hourly_sent: 3, last_error: '' },
+  { id: 2, platform: 'douyin', name: '运营号B', status: 'active', health: 0.88, today_sent: 12, hourly_sent: 5, last_error: '' },
+  { id: 3, platform: 'kuaishou', name: '快手号C', status: 'cooling', health: 0.60, today_sent: 15, hourly_sent: 8, last_error: '触发频控冷却' },
+  { id: 4, platform: 'shipinhao', name: '视频号D', status: 'frozen', health: 0.25, today_sent: 0, hourly_sent: 0, last_error: '连发爆发冻结' }
+]
+
+// ---------- 开发者特权（开发者专属） ----------
+const DEV_OPTIONS = {
+  is_developer: true,
+  privileges: [
+    { code: 'unlimited_collect', name: '无限采集', desc: '不消耗任何额度，并发无上限' },
+    { code: 'unlimited_ai', name: '无限AI', desc: 'AI摘要/话术不限次数' },
+    { code: 'unlimited_export', name: '无限导出', desc: '全量导出无限制' },
+    { code: 'all_plans', name: '全套餐体验', desc: '免费体验全部5档套餐功能' },
+    { code: 'dev_menu', name: '开发者菜单', desc: '专属开发者选项入口' },
+    { code: 'data_admin', name: '数据管理', desc: '全量数据管理与清理权限' }
+  ]
+}
+
+
+// ---------- ??销体系 & ??者?后台数据 ----------
+const PROMOTION_DATA = {
+  // 推广员
+  promoters: [
+    { id: 1, name: '??三', invite_code: 'INV888', rate: 0.30, customers: 12, status: 'active', freeze_reason: '', created_at: '2026-07-20 10:00:00' },
+    { id: 2, name: '李四', invite_code: 'INV666', rate: 0.25, customers: 8, status: 'active', freeze_reason: '', created_at: '2026-07-22 14:30:00' },
+    { id: 3, name: '王五', invite_code: 'INV333', rate: 0.20, customers: 3, status: 'frozen', freeze_reason: '批量?注刷单', created_at: '2026-07-25 09:00:00' }
+  ],
+  // 订单（含渠道/状态）
+  orders: [
+    { id: 'ord_1785510338701', user: 'user01', plan: 'basic', amount: 59, channel: 'wechat', status: 'paid', created_at: '2026-07-30 10:12:00' },
+    { id: 'ord_1785510438702', user: 'user02', plan: 'pro', amount: 199, channel: 'alipay', status: 'paid', created_at: '2026-07-30 15:40:00' },
+    { id: 'ord_1785510538703', user: 'user03', plan: 'channel_agent', amount: 1280, channel: 'wechat', status: 'paid', created_at: '2026-07-31 09:05:00' },
+    { id: 'ord_1785510638704', user: 'user04', plan: 'basic', amount: 59, channel: 'alipay', status: 'refunded', created_at: '2026-07-31 11:22:00' },
+    { id: 'ord_1785510738705', user: 'user05', plan: 'basic', amount: 59, channel: 'wechat', status: 'paid', created_at: '2026-07-31 14:45:00' },
+    { id: 'ord_1785510838706', user: 'user06', plan: 'trial', amount: 0.01, channel: 'wechat', status: 'paid', created_at: '2026-07-31 16:30:00' }
+  ],
+  // 佣金（按推广员聚合）
+  commissions: {
+    '??三': [
+      { order_id: 'ord_1785510338701', amount: 17.7, rate: 0.30, status: 'paid', created_at: '2026-07-30 10:12:00' },
+      { order_id: 'ord_1785510438702', amount: 59.7, rate: 0.30, status: 'paid', created_at: '2026-07-30 15:40:00' },
+      { order_id: 'ord_1785510738705', amount: 17.7, rate: 0.30, status: 'pending', created_at: '2026-07-31 14:45:00' }
+    ],
+    '李四': [
+      { order_id: 'ord_1785510538703', amount: 320, rate: 0.25, status: 'paid', created_at: '2026-07-31 09:05:00' },
+      { order_id: 'ord_1785510838706', amount: 0.0025, rate: 0.25, status: 'pending', created_at: '2026-07-31 16:30:00' }
+    ]
+  },
+  // 提现
+  withdrawals: [
+    { id: 'wd_1785510938701', user: '??三', amount: 50, channel: 'wechat', status: 'pending', request_time: '2026-07-31 12:00:00' },
+    { id: 'wd_1785511038702', user: '李四', amount: 200, channel: 'alipay', status: 'approved', request_time: '2026-07-30 18:00:00' }
+  ],
+  // 客户登记报表
+  userReports: [
+    { userId: 'user01', registrationTime: '2026-07-30 10:12:00', paymentChannel: 'wechat', identitySubject: '张*', promoter: '??三', promoterId: 1, planStatus: 'basic', paymentHistory: 1, commissionHistory: 1, deviceIP: '113.87.160.11', operationLogs: 23, customerContact: '138****0000' },
+    { userId: 'user02', registrationTime: '2026-07-30 15:40:00', paymentChannel: 'alipay', identitySubject: '李*', promoter: '??三', promoterId: 1, planStatus: 'pro', paymentHistory: 1, commissionHistory: 1, deviceIP: '120.36.88.22', operationLogs: 15, customerContact: '139****2222' },
+    { userId: 'user03', registrationTime: '2026-07-31 09:05:00', paymentChannel: 'wechat', identitySubject: '王*', promoter: '李四', promoterId: 2, planStatus: 'channel_agent', paymentHistory: 1, commissionHistory: 1, deviceIP: '218.94.33.5', operationLogs: 31, customerContact: '137****8888' },
+    { userId: 'user05', registrationTime: '2026-07-31 14:45:00', paymentChannel: 'wechat', identitySubject: '赵*', promoter: '??三', promoterId: 1, planStatus: 'basic', paymentHistory: 1, commissionHistory: 1, deviceIP: '114.96.201.7', operationLogs: 9, customerContact: '136****6666' },
+    { userId: 'user06', registrationTime: '2026-07-31 16:30:00', paymentChannel: 'wechat', identitySubject: '孙*', promoter: '李四', promoterId: 2, planStatus: 'trial', paymentHistory: 1, commissionHistory: 1, deviceIP: '115.212.77.19', operationLogs: 4, customerContact: '135****1111' }
+  ],
+  // 全量用户（开发者视角）
+  users: [
+    { id: 1, username: 'admin', name: '', plan: 'premium', identity: 'verified', contact: 'dev@example.com', device_ip: '127.0.0.1', registered_at: '2026-07-01 00:00:00', is_promoter: false },
+    { id: 2, username: 'user01', name: '', plan: 'basic', identity: 'verified', contact: '138****0000', device_ip: '113.87.160.11', registered_at: '2026-07-30 10:12:00', is_promoter: false },
+    { id: 3, username: 'user02', name: '', plan: 'pro', identity: 'verified', contact: '139****2222', device_ip: '120.36.88.22', registered_at: '2026-07-30 15:40:00', is_promoter: false },
+    { id: 4, username: 'user03', name: '', plan: 'channel_agent', identity: 'pending', contact: '137****8888', device_ip: '218.94.33.5', registered_at: '2026-07-31 09:05:00', is_promoter: false },
+    { id: 5, username: 'user05', name: '', plan: 'basic', identity: 'verified', contact: '136****6666', device_ip: '114.96.201.7', registered_at: '2026-07-31 14:45:00', is_promoter: false }
+  ],
+  financeReports: {
+    totalIncome: 1656.01,
+    channelAgentFeeIncome: 1280,
+    commissionExpense: 415.1025,
+    wechatAlipayReconciliation: {
+      wechat: { paid: 1398.01, refunded: 0, balance: 1398.01 },
+      alipay: { paid: 258, refunded: 59, balance: 199 }
+    },
+    reportDate: '2026-07-31'
+  }
+}
+
 function route(config) {
   const method = (config.method || 'get').toLowerCase()
   let url = config.url || ''
@@ -421,6 +571,175 @@ function route(config) {
   }
   if (url === '/crawler/config') {
     return json({ result: { min_interval: 3, max_per_minute: 20, retry_times: 3, mode: 'mock 演示模式' } })
+  }
+
+
+  // ---------- 商业化: 套餐/增值/优惠券 ----------
+  if (url === '/plans') {
+    return json({ results: PLANS, total: PLANS.length })
+  }
+  if (url === '/plans/addons') {
+    return json({ results: ADDON_SERVICES, total: ADDON_SERVICES.length })
+  }
+  if (url === '/coupons') {
+    return json({ results: COUPONS, total: COUPONS.length })
+  }
+
+  // ---------- 实名认证 ----------
+  if (url === '/auth/realname' && method === 'get') {
+    return json({ result: REALNAME_STATUS })
+  }
+  if (url === '/auth/realname' && method === 'post') {
+    // 模拟认证: 一证一号校验
+    if (body.id_card && body.id_card.length !== 18) {
+      return json({ detail: '身份证号格式错误(18位)' }, 400)
+    }
+    return json({ result: { authenticated: true, real_name: body.real_name || '张**', face_verified: true, auth_date: daysAgo(0), message: '实名认证成功，已赠送10条当日线索' } })
+  }
+
+  // ---------- B2B 企业库 ----------
+  if (url === '/biz/companies' && method === 'get') {
+    let list = [...BIZ_COMPANIES]
+    if (params.province) list = list.filter(c => c.province.includes(params.province))
+    if (params.city) list = list.filter(c => c.city.includes(params.city))
+    if (params.industry) list = list.filter(c => c.industry_l3.includes(params.industry))
+    if (params.insured_min) list = list.filter(c => c.insured_count >= parseInt(params.insured_min, 10))
+    if (params.insured_max) list = list.filter(c => c.insured_count <= parseInt(params.insured_max, 10))
+    if (params.tender_90d) list = list.filter(c => c.tender_cnt_90d >= parseInt(params.tender_90d, 10))
+    if (params.intent_min) list = list.filter(c => c.intent_score >= parseInt(params.intent_min, 10))
+    if (params.q) list = list.filter(c => (c.name + c.product_tags.join('')).includes(params.q))
+    return json({ results: list, total: list.length })
+  }
+  if (url === '/biz/companies/geo') {
+    // 地图圈选: 经纬度+半径 模拟
+    return json({ results: BIZ_COMPANIES.slice(0, 5), total: 5, hint: '模拟圈选: ' + (params.lng || '') + ',' + (params.lat || '') + ' 半径' + (params.radius || 10) + 'km' })
+  }
+  if (/^\/biz\/companies\/\d+$/.test(url) && method === 'get') {
+    const id = parseInt(url.split('/')[3], 10)
+    const c = BIZ_COMPANIES.find(x => x.id === id)
+    if (!c) return json({ detail: '企业不存在' }, 404)
+    return json({ result: { ...c, events: [
+      { event_type: 'tender', event_date: c.last_tender_date || daysAgo(10), detail: '中标公告发布', source_url: 'https://example.com/tender' },
+      { event_type: 'recruit', event_date: c.last_recruit_date || daysAgo(20), detail: '新增招聘岗位', source_url: 'https://example.com/job' }
+    ], contacts: (c.contact_count || 0) > 0 ? [{ name: c.top_contact.name, role: c.top_contact.role, role_score: c.top_contact.role_score, phone: '138****' + String(c.id).padStart(4, '0'), valid_status: 'valid', masked: true }] : [] } })
+  }
+  if (url === '/biz/companies/export' && method === 'post') {
+    // 导出: 扣点+审计+水印
+    return json({ result: { export_id: 'exp_' + Date.now(), count: (body.company_ids || []).length, cost_points: 10 * (body.company_ids || []).length, watermark: '已脱敏-演示水印', audit_logged: true } })
+  }
+  if (url === '/biz/templates' && method === 'get') {
+    return json({ results: BIZ_TEMPLATES, total: BIZ_TEMPLATES.length })
+  }
+  if (url === '/biz/templates' && method === 'post') {
+    const t = { id: BIZ_TEMPLATES.length + 1, name: body.name, industry: body.industry || '', conditions: JSON.stringify(body.conditions || {}), is_public: !!body.is_public, usage_count: 0 }
+    BIZ_TEMPLATES.push(t)
+    return json({ result: t }, 201)
+  }
+
+  // ---------- 短视频询盘/监控/账号池 ----------
+  if (url === '/monitor/inquiries' && method === 'get') {
+    let list = [...INQUIRIES]
+    if (params.min_score) list = list.filter(i => i.intent_score >= parseFloat(params.min_score))
+    if (params.status) list = list.filter(i => i.status === params.status)
+    return json({ results: list, total: list.length })
+  }
+  if (url === '/monitor/targets' && method === 'get') {
+    return json({ results: MONITOR_TARGETS, total: MONITOR_TARGETS.length })
+  }
+  if (url === '/monitor/targets' && method === 'post') {
+    const t = { id: MONITOR_TARGETS.length + 1, target_type: body.target_type, target_id: body.target_id, platform: body.platform, title: body.title || '新监控目标', status: 'active', last_pull_time: daysAgo(0), comments_total: 0, high_intent: 0 }
+    MONITOR_TARGETS.push(t)
+    return json({ result: t }, 201)
+  }
+  if (url === '/accounts' && method === 'get') {
+    return json({ results: ACCOUNTS, total: ACCOUNTS.length })
+  }
+  if (url === '/accounts' && method === 'post') {
+    const a = ACCOUNTS.find(x => x.id === parseInt(body.id, 10))
+    if (a) { a.status = body.status || a.status; a.last_error = body.status === 'active' ? '' : (a.last_error || '手动调整') }
+    return json({ result: a })
+  }
+  if (url === '/trigger/rules' && method === 'get') {
+    return json({ results: [
+      { id: 1, name: '高意向自动私信', cond_intent_min: 0.70, cond_fan: '50-5000', action_type: 'send_dm', round: 1, enabled: true },
+      { id: 2, name: '中意向回评', cond_intent_min: 0.60, cond_fan: '100-10000', action_type: 'reply_comment', round: 2, enabled: true }
+    ], total: 2 })
+  }
+
+  // ---------- 开发者特权 ----------
+  if (url === '/dev/options' && method === 'get') {
+    return json({ result: DEV_OPTIONS })
+  }
+
+
+  // ---------- ??销体系 ----------
+  if (url === '/promotion/my' && method === 'get') {
+    // 当前用户推广员信息（演示固定返回??三）
+    const me = PROMOTION_DATA.promoters[0]
+    const myComms = PROMOTION_DATA.commissions[me.name] || []
+    const paidSum = myComms.filter(c => c.status === 'paid').reduce((s, c) => s + c.amount, 0)
+    const pendingSum = myComms.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0)
+    return json({
+      promoter: me,
+      stats: { total_commission: Math.round((paidSum + pendingSum) * 100) / 100, withdrawable: Math.round(paidSum * 100) / 100, customers: me.customers }
+    })
+  }
+  if (url === '/promotion/apply' && method === 'post') {
+    return json({ detail: '??请成功，已生成邀?码 INV888', promoter: PROMOTION_DATA.promoters[0] }, 201)
+  }
+  if (url === '/promotion/commissions' && method === 'get') {
+    const rows = []
+    Object.entries(PROMOTION_DATA.commissions).forEach(([name, list]) => {
+      list.forEach(c => rows.push({ promoter: name, ...c }))
+    })
+    return json({ results: rows, total: rows.length })
+  }
+  if (url === '/promotion/withdraw' && method === 'post') {
+    const wd = { id: 'wd_' + Date.now(), user: body.user || '??三', amount: body.amount, channel: body.channel || 'wechat', status: 'pending', request_time: daysAgo(0) }
+    PROMOTION_DATA.withdrawals.push(wd)
+    return json({ detail: '提现申?已提交，?待审核', withdrawalId: wd.id }, 201)
+  }
+  if (url === '/promotion/register' && method === 'post') {
+    // 0.01??体验包?册（经推?海报）
+    const promo = body.promoter || ''
+    const poster = PROMOTION_DATA.promoters.find(p => p.name === promo || p.invite_code === promo)
+    if (!poster) return json({ detail: '无?的推?海报' }, 400)
+    const order = { id: 'ord_' + Date.now(), user: body.username || 'new_user', plan: 'trial', amount: 0.01, channel: body.channel || 'wechat', status: 'paid', created_at: daysAgo(0) }
+    PROMOTION_DATA.orders.push(order)
+    poster.customers += 1
+    return json({ success: true, message: '注册成功', orderId: order.id }, 201)
+  }
+
+  // ---------- ??者?后台 ----------
+  if (url === '/admin/platform' && method === 'get') {
+    const f = PROMOTION_DATA.financeReports
+    return json({
+      users: PROMOTION_DATA.users,
+      orders: PROMOTION_DATA.orders,
+      commissions: PROMOTION_DATA.commissions,
+      withdrawals: PROMOTION_DATA.withdrawals,
+      promoters: PROMOTION_DATA.promoters,
+      userReports: PROMOTION_DATA.userReports,
+      financeReports: f
+    })
+  }
+  if (url.startsWith('/admin/promoter/') && url.endsWith('/freeze') && method === 'post') {
+    const pid = parseInt(url.split('/')[3], 10)
+    const p = PROMOTION_DATA.promoters.find(x => x.id === pid)
+    if (!p) return json({ detail: '推?员不存在' }, 404)
+    p.status = 'frozen'
+    p.freeze_reason = body.reason || '违?操作'
+    return json({ detail: '推?员已?结：' + p.name })
+  }
+  if (url === '/admin/withdrawals' && method === 'get') {
+    return json({ results: PROMOTION_DATA.withdrawals })
+  }
+  if (url.startsWith('/admin/withdrawal/') && method === 'post') {
+    const wid = url.split('/')[3]
+    const wd = PROMOTION_DATA.withdrawals.find(x => x.id === wid)
+    if (!wd) return json({ detail: '提?不存在' }, 404)
+    wd.status = body.status || 'approved'
+    return json({ detail: '已更新：' + wd.status })
   }
 
   // 未匹配
