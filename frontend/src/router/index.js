@@ -15,6 +15,7 @@ const routes = [
       { path: 'analysis', name: 'AIAnalysis', component: () => import('../views/AIAnalysis.vue'), meta: { title: 'AI 分析' } },
       { path: 'member', name: 'MemberCenter', component: () => import('../views/MemberCenter.vue'), meta: { title: '会员中心' } },
       { path: 'system', name: 'SystemAdmin', component: () => import('../views/SystemAdmin.vue'), meta: { title: '系统管理' } },
+      { path: 'dev', name: 'DeveloperOptions', component: () => import('../views/DeveloperOptions.vue'), meta: { title: '开发者选项', requiresDev: true } },
       { path: 'disclaimer', name: 'Disclaimer', component: () => import('../views/Disclaimer.vue'), meta: { title: '合规声明' } }
     ]
   }
@@ -30,9 +31,17 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   if (!to.meta.public && !token) {
     next('/login')
-  } else {
-    next()
+    return
   }
+  // 开发者选项：仅开发者账号可访问
+  if (to.meta.requiresDev) {
+    const u = JSON.parse(localStorage.getItem('user') || '{}')
+    if (u.username !== 'admin' && u.role_type !== 'admin' && !u.is_developer) {
+      next('/dashboard')
+      return
+    }
+  }
+  next()
 })
 
 export default router
