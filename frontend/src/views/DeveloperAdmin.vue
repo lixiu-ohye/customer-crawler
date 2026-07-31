@@ -99,7 +99,20 @@
             </template>
           </el-table-column>
           <el-table-column prop="request_time" label="申请时间" width="150" />
-        </el-table>
+                  <el-table-column prop="payout_id" label="分?流水?" width="150">
+            <template #default="{ row }">
+              <span v-if="row.payout_id" style="color: #67C23A">{{ row.payout_id }}</span>
+              <span v-else style="color: #909399">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" fixed="right">
+            <template #default="{ row }">
+              <el-button v-if="row.status === 'pending'" size="small" type="success" @click="approveWithdraw(row)">打款</el-button>
+              <el-button v-if="row.status === 'pending'" size="small" type="danger" @click="rejectWithdraw(row)">驳回</el-button>
+              <span v-else style="color: #909399; font-size: 12px">已处理</span>
+            </template>
+          </el-table-column>
+</el-table>
       </el-tab-pane>
 
       <!-- 客户登记报表 -->
@@ -242,6 +255,27 @@ const exportJson = () => {
   a.click()
   URL.revokeObjectURL(a.href)
 }
+
+const approveWithdraw = async row => {
+  try {
+    const res = await api.post('/admin/withdrawal/' + row.id, { status: 'approved' })
+    ElMessage.success('已打款，分账流水号: ' + (res.payout_id || ''))
+    await refresh()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.detail || '打款失败')
+  }
+}
+
+const rejectWithdraw = async row => {
+  try {
+    await api.post('/admin/withdrawal/' + row.id, { status: 'rejected', remark: '审核驳回' })
+    ElMessage.success('已驳回')
+    await refresh()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.detail || '操作失败')
+  }
+}
+
 </script>
 
 <style scoped>
