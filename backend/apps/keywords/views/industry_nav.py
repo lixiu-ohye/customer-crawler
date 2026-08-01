@@ -132,7 +132,7 @@ class IndustryNavView(APIView):
                 all_negative_words,
             )
             return Response({
-                "result": {
+                "results": {
                     "industry": industry,
                     "description": INDUSTRY_DESC.get(industry, ""),
                     "mainWords": lib["mainWords"],
@@ -151,7 +151,10 @@ class IndustryNavView(APIView):
             }
             for i, name in enumerate(INDUSTRY_LIBRARY.keys())
         ]
-        return Response({"result": {"industries": industries}})
+        return Response({"results": {
+            "industries": industries,
+            "cities": ["北京", "上海", "广州", "深圳", "成都", "杭州", "南京", "武汉", "长沙", "重庆", "西安", "郑州", "岳阳", "周口"],
+        }})
 
 
 class PromoterIndustryView(APIView):
