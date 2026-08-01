@@ -30,12 +30,19 @@ class IndustryLeadsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """优先返回数据库中的真实爬虫线索；数据库为空时回退演示数据"""
         q = request.query_params
         industry = (q.get("industry") or "").strip()
         region = (q.get("region") or "").strip()
         field = (q.get("field") or "").strip()
         scenario = (q.get("scenario") or "").strip()
         intent_min = (q.get("intent") or "").strip()
+
+        db_leads = self._db_leads(industry, region, field, scenario, intent_min)
+        if db_leads:
+            return Response({"results": db_leads, "total": len(db_leads), "source": "database"})
+
+        # 回退：演示数据
         leads = NAV_LEADS
         if industry:
             leads = [x for x in leads if x["industry"] == industry]
@@ -51,8 +58,41 @@ class IndustryLeadsView(APIView):
                 leads = [x for x in leads if x["intent"] >= mi]
             except ValueError:
                 pass
-        return Response({"results": leads, "total": len(leads)})
+        return Response({"results": leads, "total": len(leads), "source": "demo"})
 
+    def _db_leads(self, industry="", region="", field="", scenario="", intent_min=""):
+        """从 Lead 表读取爬虫采集的真实线索（仅意向非 none，按意向分倒序）"""
+        from apps.leads.models import Lead
+        qs = Lead.objects.exclude(intent_label="none").order_by("-intent_score", "-id")
+        if industry:
+            qs = qs.filter(tags__icontains=industry)
+        if region:
+            qs = qs.filter(region__icontains=region)
+        if scenario:
+            qs = qs.filter(title__icontains=scenario)
+        if intent_min:
+            try:
+                qs = qs.filter(intent_score__gte=int(intent_min))
+            except ValueError:
+                pass
+        rows = []
+        for lead in qs[:100]:
+            tags = lead.tags or []
+            ind = tags[0] if tags else (lead.demand or "其他")
+            rows.append({
+                "id": lead.id,
+                "industry": ind,
+                "region": lead.region or "",
+                "field": lead.demand or "",
+                "scenario": lead.title or "",
+                "need": lead.content or "",
+                "contact": lead.author or "",
+                "phone": "157****7789",
+                "intent": lead.intent_score,
+                "status": "待跟进" if lead.status == "new" else lead.status,
+                "created_at": lead.created_at.strftime("%Y-%m-%d %H:%M"),
+            })
+        return rows
 
 class IndustryRegionsView(APIView):
     """地域热点（演示）"""
