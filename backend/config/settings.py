@@ -154,6 +154,25 @@ INTENT_SCORING = {
 }
 
 # 高德地图（用于热力图聚合与逆地理编码；无 Key 时仅展示点位）
+
+# ---------- 官方开放 API 凭证 (合规采集) ----------
+# 在各平台开放平台申请开发者权限后, 将凭证填入 .env 或此处:
+#   抖音:    DOUYIN_CLIENT_KEY / DOUYIN_CLIENT_SECRET  (open.douyin.com)
+#   小红书:  XHS_APP_ID / XHS_APP_SECRET               (专业号开放平台)
+#   快手:    KUAISHOU_APP_KEY / KUAISHOU_APP_SECRET    (open.kuaishou.com)
+#   微博:    WEIBO_ACCESS_TOKEN                        (open.weibo.com)
+#   知乎:    ZHIHU_TOKEN                               (合作通道)
+#   贴吧:    TIEBA_COOKIE                              (无公开 API, 预留)
+# 未配置凭证时自动降级为演示数据模式 (source=demo), 保证前端可运行。
+OFFICIAL_API_CREDENTIALS = {
+    "douyin": {"client_key": os.getenv("DOUYIN_CLIENT_KEY", ""), "client_secret": os.getenv("DOUYIN_CLIENT_SECRET", "")},
+    "xiaohongshu": {"app_id": os.getenv("XHS_APP_ID", ""), "app_secret": os.getenv("XHS_APP_SECRET", "")},
+    "kuaishou": {"app_key": os.getenv("KUAISHOU_APP_KEY", ""), "app_secret": os.getenv("KUAISHOU_APP_SECRET", "")},
+    "weibo": {"access_token": os.getenv("WEIBO_ACCESS_TOKEN", "")},
+    "zhihu": {"token": os.getenv("ZHIHU_TOKEN", "")},
+    "tieba": {"token": os.getenv("TIEBA_COOKIE", "")},
+}
+
 AMAP_KEY = os.getenv("AMAP_KEY", "")
 
 LOGGING = {
