@@ -6,6 +6,7 @@ from apps.keywords.models import Keyword, KeywordGroup
 from apps.keywords.services import KeywordService
 from apps.keywords.views.industry_nav import IndustryNavView, PromoterIndustryView
 from apps.keywords.views.industry_views import IndustryApplyView, IndustryLibraryView
+from apps.keywords.views.industry_nav import IndustryLeadsView, IndustryRegionsView, IndustryTreeView
 
 
 def _serialize(kw):
