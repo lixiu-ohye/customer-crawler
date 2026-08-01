@@ -12,6 +12,7 @@
 import hashlib
 import json
 import logging
+import os
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -55,25 +56,154 @@ class OfficialAPIAdapter:
         self._rate_limiter = self._build_rate_limiter()
 
     # ---------- 凭证 ----------
+    # Redis 键前缀: 管理员在「系统管理」页填写的凭证, 存 Redis 热生效 (无需重启)
+    CREDENTIALS_REDIS_KEY = "official_api:credentials"
+    # 本地文件缓存 (Redis 不可用时兜底, 开发/演示环境)
+    CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".official_credentials.json")
+
+    @classmethod
+    def _storage_read(cls) -> Dict[str, Dict[str, str]]:
+        """读凭证存储: 优先 Redis, 回退本地 JSON 文件"""
+        # 1. Redis
+        try:
+            from django_redis import get_redis_connection
+
+            r = get_redis_connection("default")
+            raw = r.get(cls.CREDENTIALS_REDIS_KEY)
+            if raw:
+                return json.loads(raw)
+        except Exception:
+            pass
+        try:
+            import redis
+
+            r = redis.Redis.from_url(getattr(settings, "REDIS_URL", "redis://127.0.0.1:6379/0"), socket_timeout=2)
+            raw = r.get(cls.CREDENTIALS_REDIS_KEY)
+            if raw:
+                return json.loads(raw)
+        except Exception:
+            pass
+        # 2. 本地文件
+        try:
+            path = os.path.normpath(cls.CREDENTIALS_FILE)
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+
+    @classmethod
+    def _storage_write(cls, data: Dict[str, Dict[str, str]]) -> bool:
+        """写凭证存储: 优先 Redis, 回退本地 JSON 文件"""
+        wrote_any = False
+        # 1. Redis
+        try:
+            from django_redis import get_redis_connection
+
+            r = get_redis_connection("default")
+            r.set(cls.CREDENTIALS_REDIS_KEY, json.dumps(data, ensure_ascii=False))
+            wrote_any = True
+        except Exception:
+            pass
+        if not wrote_any:
+            try:
+                import redis
+
+                r = redis.Redis.from_url(getattr(settings, "REDIS_URL", "redis://127.0.0.1:6379/0"), socket_timeout=2)
+                r.set(cls.CREDENTIALS_REDIS_KEY, json.dumps(data, ensure_ascii=False))
+                wrote_any = True
+            except Exception:
+                pass
+        # 2. 本地文件 (始终写, 保证开发环境可用)
+        try:
+            path = os.path.normpath(cls.CREDENTIALS_FILE)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            wrote_any = True
+        except Exception:
+            pass
+        return wrote_any
+
+    @classmethod
+    def _redis_get_credentials(cls) -> Dict[str, Dict[str, str]]:
+        """兼容别名: 读全部凭证 (Redis 或本地文件)"""
+        return cls._storage_read()
+
     def _load_credentials(self) -> Dict[str, str]:
-        """从 settings.OFFICIAL_API_CREDENTIALS 或环境变量加载凭证"""
+        """
+        加载凭证, 优先级: 热配置(Redis/文件) > settings.OFFICIAL_API_CREDENTIALS > 环境变量
+        """
+        # 1. 热配置凭证 (优先)
+        redis_creds = self._storage_read()
+        platform_creds = dict(redis_creds.get(self.PLATFORM, {}) or {})
+        # 2. settings 静态配置 (补充缺失项)
         creds = getattr(settings, "OFFICIAL_API_CREDENTIALS", {}) or {}
-        platform_creds = creds.get(self.PLATFORM, {}) or {}
-        # 环境变量优先
+        static = creds.get(self.PLATFORM, {}) or {}
+        for k, v in static.items():
+            platform_creds.setdefault(k, v)
+        # 3. 环境变量兜底
         if self.CREDENTIAL_ENV:
             env_val = getattr(settings, "OFFICIAL_API_%s" % self.PLATFORM.upper(), None)
             if env_val:
                 platform_creds["token"] = env_val
         return platform_creds
 
+    @classmethod
+    def set_credentials(cls, platform: str, creds: Dict[str, str]) -> bool:
+        """管理员热配置凭证 (存 Redis/本地文件, 立即生效)"""
+        try:
+            data = cls._storage_read()
+            data[platform] = {k: v for k, v in creds.items() if v}
+            ok = cls._storage_write(data)
+            if not ok:
+                return False
+            # 刷新内存中的适配器实例
+            from apps.crawler.official_apis.base import AdapterRegistry
+
+            adapter = AdapterRegistry.get(platform)
+            if adapter:
+                adapter.credentials = adapter._load_credentials()
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def clear_credentials(cls, platform: str) -> bool:
+        """清除某平台的热配置凭证 (回退到 settings/env)"""
+        try:
+            data = cls._storage_read()
+            if platform in data:
+                del data[platform]
+                cls._storage_write(data)
+            adapter = AdapterRegistry.get(platform)
+            if adapter:
+                adapter.credentials = adapter._load_credentials()
+            return True
+        except Exception:
+            return False
+
     @property
     def is_configured(self) -> bool:
-        """是否配置了真实凭证 (未配置则走演示模式)"""
-        return bool(self.credentials.get("token") or self.credentials.get("appkey") or self.credentials.get("api_key"))
+        """
+        是否配置了真实凭证 (未配置则走演示模式) — 每次实时判定, 支持热配置
+        判定字段覆盖各平台凭证命名: token/appkey/api_key/client_key/app_id/access_token
+        """
+        self.credentials = self._load_credentials()
+        return bool(
+            self.credentials.get("token")
+            or self.credentials.get("appkey")
+            or self.credentials.get("api_key")
+            or self.credentials.get("client_key")
+            or self.credentials.get("app_id")
+            or self.credentials.get("access_token")
+            or self.credentials.get("app_key")
+        )
 
     @property
     def mode(self) -> str:
-        """当前生效模式: official_api(真实) / demo(演示)"""
+        """当前生效模式: official_api(真实) / demo(演示) — 实时判定"""
         return "official_api" if self.is_configured else "demo"
 
     # ---------- 限速 ----------
@@ -127,6 +257,7 @@ class OfficialAPIAdapter:
         """统一输出结构 (与前端 mock.js 的 LEADS 字段兼容)"""
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         platform_name = self.PLATFORM_NAME
+        source = item.pop("_source", None) or ("official_api" if self.is_configured else "demo")
         return {
             "id": str(item.get("id") or uuid.uuid4().hex[:12]),
             "platform": self.PLATFORM,
@@ -141,7 +272,7 @@ class OfficialAPIAdapter:
             "comment_count": int(item.get("comment_count") or item.get("comments") or 0),
             "share_count": int(item.get("share_count") or item.get("shares") or 0),
             "created_at": str(item.get("created_at") or item.get("publish_time") or now),
-            "source": "official_api" if self.is_configured else "demo",
+            "source": source,
             "collected_at": now,
         }
 
@@ -157,22 +288,33 @@ class OfficialAPIAdapter:
             list[dict] 规范化后的线索数据
         """
         self._wait()
+        mode_before = self.mode  # 实时刷新凭证并判定
+        fallback_reason = None
         try:
             if self.is_configured:
                 raw = self._search_impl(keyword, limit=limit, **kwargs)
             else:
                 raw = self._demo_search(keyword, limit=limit, **kwargs)
-        except OfficialAPIError:
-            raise
+        except OfficialAPIError as exc:
+            # 配置了凭证但官方调用失败 → 优雅降级演示数据并标记 (线上演示不中断)
+            logger.warning("[%s] official API error, fallback to demo: %s", self.PLATFORM, exc)
+            fallback_reason = str(exc)[:200]
+            raw = self._demo_search(keyword, limit=limit, **kwargs)
+            for _item in raw:
+                _item["_source"] = "demo_fallback"
         except Exception as exc:  # 真实 API 失败时降级演示数据并记录
             logger.warning("[%s] official API failed, fallback to demo: %s", self.PLATFORM, exc)
+            fallback_reason = str(exc)[:200]
             raw = self._demo_search(keyword, limit=limit, **kwargs)
+            for _item in raw:
+                _item["_source"] = "demo_fallback"
         results = []
         for item in raw:
             safe = self._anonymize(item)
             results.append(self.normalize_item(safe))
         # 审计日志 (留痕)
-        self._audit(keyword, len(results), self.mode)
+        actual_mode = mode_before if not fallback_reason else "demo_fallback"
+        self._audit(keyword, len(results), actual_mode)
         return results[:limit]
 
     # ---------- 演示数据 (未配置凭证时) ----------
