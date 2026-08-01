@@ -255,11 +255,14 @@ const NAV_INDUSTRIES = [
   { id: 7, name: '房产同城服务', description: '房产相关服务', preview: ['二手房', '租房', '新房', '商铺出租'], keywords: ['二手房', '租房', '新房', '商铺出租'] },
   { id: 8, name: '婚庆摄影', description: '婚庆摄影行业', preview: ['婚纱摄影', '婚礼策划', '婚庆布置', '跟妆'], keywords: ['婚纱摄影', '婚礼策划', '婚庆布置', '跟妆'] },
   { id: 9, name: '口腔/健康理疗', description: '医疗健康行业', preview: ['牙科', '牙齿矫正', '体检', '康复理疗'], keywords: ['牙科', '牙齿矫正', '体检', '康复理疗', '中医推拿'] },
-  { id: 10, name: '工程建材行业', description: '工程设备行业', preview: ['建材', '工装施工', '厂房搭建', '工程机械租赁'], keywords: ['建材', '工装施工', '厂房搭建', '工程机械租赁'] },
+  { id: 10, name: '工程建材行业', description: '工程设备行业', preview: ['建材', '工程施工', '厂房搭建', '工程机械租赁'], keywords: ['建材', '工程施工', '厂房搭建', '工程机械租赁'] },
   { id: 11, name: '宠物行业', description: '宠物相关服务', preview: ['宠物美容', '宠物医院', '宠物寄养', '猫狗售卖'], keywords: ['宠物美容', '宠物医院', '宠物寄养', '猫狗售卖'] },
-  { id: 12, name: '互联网服务商（代运营/软件开发）', description: '互联网电商行业', preview: ['小程序开发', '短视频代运营', '抖店运营', '网站搭建'], keywords: ['小程序开发', '短视频代运营', '抖店运营', '网站搭建'] }
-]
+  { id: 12, name: '法律行业', description: '法律需求高利润行业', preview: ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁'], keywords: ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿'] },
+  { id: 13, name: '互联网服务商（代运营/软件开发）', description: '互联网电商行业', preview: ['小程序开发', '短视频代运营', '抖店运营', '网站搭建'], keywords: ['小程序开发', '短视频代运营', '抖店运营', '网站搭建'] }
+];
 const NAV_KEYWORD_LIB = {
+
+  '法律行业': { mainWords: ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿'], longTailWords: ['离婚财产怎么分割', '刑事辩护律师费用', '交通事故赔偿标准', '劳动仲裁怎么申请', '合同纠纷如何起诉', '商标被侵权怎么办', '二手房买卖纠纷', '欠钱不还怎么起诉', '公司股权纠纷律师', '人身损害怎么赔偿'], negativeWords: ['法考培训', '司法考试', '法条背诵', '考研资料', '公开课', '法学生求职', '律所招聘', '法学论文'] },
   '装修家居': { mainWords: ['装修', '旧房翻新', '防水补漏', '全屋定制', '门窗定制'], longTailWords: ['家里装修大概多少钱', '老房子翻新方案', '卫生间漏水怎么修', '阳台封窗哪家好', '全屋定制报价', '新房装修流程', '厨房改造', '墙面渗水维修'], negativeWords: ['教程', '培训', '加盟', '招商', '厂家批发', '材料批发', '招聘', '设计图纸免费', '自媒体', '博主分享'] },
   '本地生活家政服务': { mainWords: ['家政保洁', '开荒保洁', '除甲醛', '家电清洗', '搬家', '月嫂'], longTailWords: ['新房开荒保洁价格', '甲醛治理有用吗', '空调清洗多少钱', '搬家公司推荐', '月嫂价格', '深度保洁', '下水道疏通', '保姆怎么找'], negativeWords: ['工具批发', '设备售卖', '培训课程', '加盟', '教学', '视频教程', '摆摊', '货源'] },
   '汽车服务行业': { mainWords: ['二手车', '汽车维修', '汽车贴膜', '车险', '租车'], longTailWords: ['本地二手私家车出售', '汽车保养价格', '车窗贴膜多少钱', '车险哪家划算', '短期租车', '事故车维修', '新能源维修'], negativeWords: ['车评', '测评', '博主', '批发配件', '汽配工厂', '教学', '改装教程', '赛事'] },
@@ -274,6 +277,50 @@ const NAV_KEYWORD_LIB = {
   '互联网服务商（代运营/软件开发）': { mainWords: ['小程序开发', '短视频代运营', '抖店运营', '网站搭建'], longTailWords: ['商家小程序怎么做', '抖音店铺代运营费用', '企业官网搭建', '千川投放咨询'], negativeWords: ['免费源码', '自学教程', '素材下载', '课程培训', '教学直播', '模板免费领'] }
 }
 const NAV_CITIES = ['北京', '上海', '广州', '深圳', '成都', '杭州', '南京', '武汉', '长沙', '重庆', '西安', '郑州', '岳阳', '周口']
+
+
+// ---- 客户线索演示数据（行业地域导航 drill-down 用） ----
+const NAV_LEADS = [
+  { id: 1, industry: '装修家居', region: '深圳', field: '全屋定制', scenario: '新房装修', need: '全屋定制报价方案', contact: '张先生', phone: '138****2211', intent: 92, status: '待跟进', created_at: '2026-07-31 10:20:00', tags: ['高意向', '新房', '定制'] },
+  { id: 2, industry: '装修家居', region: '广州', field: '旧房翻新', scenario: '老房改造', need: '旧房翻新改造服务', contact: '李女士', phone: '139****8834', intent: 85, status: '待跟进', created_at: '2026-07-30 16:45:00', tags: ['老房', '翻新'] },
+  { id: 3, industry: '法律行业', region: '北京', field: '婚姻家庭', scenario: '离婚财产分割', need: '离婚财产分割法律咨询', contact: '王先生', phone: '136****5521', intent: 95, status: '待跟进', created_at: '2026-07-31 09:15:00', tags: ['高意向', '婚姻'] },
+  { id: 4, industry: '法律行业', region: '上海', field: '交通事故', scenario: '事故赔偿', need: '交通事故赔偿标准咨询', contact: '赵女士', phone: '137****9987', intent: 88, status: '待跟进', created_at: '2026-07-29 14:30:00', tags: ['事故', '赔偿'] },
+  { id: 5, industry: '法律行业', region: '深圳', field: '劳动仲裁', scenario: '欠薪维权', need: '劳动仲裁申请代理', contact: '陈先生', phone: '135****4432', intent: 90, status: '待跟进', created_at: '2026-07-31 11:05:00', tags: ['劳动', '仲裁'] },
+  { id: 6, industry: '法律行业', region: '广州', field: '刑事辩护', scenario: '取保候审', need: '刑事辩护律师委托', contact: '刘女士', phone: '134****2219', intent: 97, status: '待跟进', created_at: '2026-07-28 10:00:00', tags: ['高意向', '刑事'] },
+  { id: 7, industry: '教育培训', region: '成都', field: '学历提升', scenario: '成人高考', need: '成人高考报名辅导', contact: '周先生', phone: '133****7788', intent: 78, status: '待跟进', created_at: '2026-07-30 09:40:00', tags: ['学历', '成考'] },
+  { id: 8, industry: '企业B端财税商务服务', region: '杭州', field: '代理记账', scenario: '新公司注册', need: '公司注册+代理记账套餐', contact: '吴女士', phone: '132****5566', intent: 82, status: '待跟进', created_at: '2026-07-29 15:20:00', tags: ['B端', '记账'] },
+  { id: 9, industry: '婚庆摄影', region: '南京', field: '婚礼策划', scenario: '婚礼筹备', need: '一站式婚礼策划服务', contact: '郑女士', phone: '131****3344', intent: 75, status: '待跟进', created_at: '2026-07-28 17:10:00', tags: ['婚礼'] },
+  { id: 10, industry: '汽车服务行业', region: '武汉', field: '汽车维修', scenario: '事故车维修', need: '事故车维修报价', contact: '孙先生', phone: '130****9981', intent: 80, status: '待跟进', created_at: '2026-07-31 08:50:00', tags: ['事故车'] },
+  { id: 11, industry: '法律行业', region: '重庆', field: '合同纠纷', scenario: '货款拖欠', need: '合同纠纷起诉代理', contact: '钱先生', phone: '159****6622', intent: 93, status: '待跟进', created_at: '2026-07-31 13:30:00', tags: ['高意向', '合同'] },
+  { id: 12, industry: '美业医美', region: '长沙', field: '皮肤管理', scenario: '祛斑祛痘', need: '祛斑疗程咨询', contact: '冯女士', phone: '158****1122', intent: 70, status: '待跟进', created_at: '2026-07-30 11:25:00', tags: ['医美'] },
+  { id: 13, industry: '法律行业', region: '北京', field: '知识产权', scenario: '商标侵权', need: '商标侵权维权诉讼', contact: '何先生', phone: '157****7789', intent: 91, status: '待跟进', created_at: '2026-07-29 16:00:00', tags: ['高意向', '商标'] },
+  { id: 14, industry: '房产同城服务', region: '西安', field: '二手房', scenario: '二手房买卖', need: '二手房买卖中介服务', contact: '罗女士', phone: '156****4455', intent: 72, status: '待跟进', created_at: '2026-07-28 10:35:00', tags: ['二手房'] },
+];
+
+// ---- 法律行业 drill-down 树（行业→领域→场景→需求） ----
+const NAV_LEGAL_TREE = {
+  '婚姻家庭': { fields: { '离婚纠纷': { scenarios: { '离婚财产分割': ['离婚财产怎么分割', '离婚抚养权争取', '离婚房产归属'], '离婚抚养权': ['抚养权怎么判', '抚养费标准'] }, needs: ['离婚财产分割法律咨询', '离婚协议起草', '抚养权诉讼代理'] }, '婚前协议': { scenarios: { '婚前财产公证': ['婚前财产公证流程', '婚前协议怎么写'] }, needs: ['婚前财产协议起草'] } } },
+  '刑事辩护': { fields: { '取保候审': { scenarios: { '刑事拘留': ['刑事拘留多久', '取保候审条件'] }, needs: ['取保候审申请', '刑事辩护律师委托'] }, '案件辩护': { scenarios: { '开庭辩护': ['刑事案件开庭流程', '辩护律师怎么选'] }, needs: ['刑事辩护代理', '会见嫌疑人'] } } },
+  '交通事故': { fields: { '事故赔偿': { scenarios: { '事故责任认定': ['交通事故责任认定', '事故赔偿标准'] }, needs: ['交通事故赔偿咨询', '事故诉讼代理'] }, '保险理赔': { scenarios: { '保险理赔纠纷': ['保险理赔流程', '理赔金额争议'] }, needs: ['保险理赔代理'] } } },
+  '劳动仲裁': { fields: { '欠薪维权': { scenarios: { '工资拖欠': ['公司拖欠工资怎么办', '劳动仲裁申请流程'] }, needs: ['劳动仲裁申请代理', '欠薪追讨法律咨询'] }, '工伤赔偿': { scenarios: { '工伤认定': ['工伤认定标准', '工伤赔偿计算'] }, needs: ['工伤赔偿代理'] } } },
+  '合同纠纷': { fields: { '货款拖欠': { scenarios: { '合同违约': ['合同违约怎么起诉', '货款追讨'] }, needs: ['合同纠纷起诉代理', '货款催收法律服务'] }, '合同审查': { scenarios: { '合同风险': ['合同审查要点', '合同陷阱规避'] }, needs: ['合同审查服务'] } } },
+  '知识产权': { fields: { '商标侵权': { scenarios: { '商标被侵权': ['商标侵权怎么办', '商标维权流程'] }, needs: ['商标侵权维权诉讼'] }, '专利保护': { scenarios: { '专利申请': ['专利申请流程', '专利侵权判定'] }, needs: ['专利代理申请'] } } },
+  '房产纠纷': { fields: { '二手房买卖': { scenarios: { '买卖合同纠纷': ['二手房买卖纠纷处理', '房屋过户纠纷'] }, needs: ['房产纠纷诉讼代理'] }, '租赁纠纷': { scenarios: { '租房纠纷': ['租房合同纠纷', '押金退还纠纷'] }, needs: ['房屋租赁纠纷咨询'] } } },
+  '债权债务': { fields: { '欠款催收': { scenarios: { '民间借贷': ['欠钱不还怎么起诉', '借条法律效力'] }, needs: ['债权催收代理', '民间借贷诉讼'] }, '债务重组': { scenarios: { '企业债务': ['企业债务重组方案', '破产清算'] }, needs: ['债务重组法律服务'] } } },
+  '公司法务': { fields: { '股权纠纷': { scenarios: { '股权争议': ['股权纠纷怎么处理', '股东权益保护'] }, needs: ['股权纠纷诉讼代理'] }, '企业合规': { scenarios: { '公司治理': ['公司法律顾问服务', '企业合规审查'] }, needs: ['企业常年法律顾问'] } } },
+  '侵权赔偿': { fields: { '人身损害': { scenarios: { '人身伤害赔偿': ['人身损害赔偿标准', '伤残鉴定流程'] }, needs: ['人身损害赔偿代理'] }, '名誉侵权': { scenarios: { '名誉权纠纷': ['名誉侵权怎么起诉', '网络侵权维权'] }, needs: ['名誉侵权诉讼代理'] } } },
+};
+
+// ---- 地域热点（13 行业统一） ----
+const NAV_REGION_HOTSPOTS = {
+  '北京': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '装修家居', '教育培训', '企业B端财税商务服务', '房产同城服务'],
+  '上海': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '装修家居', '教育培训', '企业B端财税商务服务'],
+  '广州': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '装修家居', '汽车服务行业', '美业医美'],
+  '深圳': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '装修家居', '互联网服务商', '企业B端财税商务服务'],
+  '江苏': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '工程建材行业', '宠物行业'],
+  '浙江': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '婚庆摄影', '教育培训'],
+  '广东': ['婚姻家庭', '刑事辩护', '交通事故', '劳动仲裁', '合同纠纷', '知识产权', '房产纠纷', '债权债务', '公司法务', '侵权赔偿', '汽车服务行业', '美业医美'],
+};
 
 const PROMOTION_DATA = {
   // 推广员
@@ -580,6 +627,36 @@ function route(config) {
     return json({ result: { saved: ids.length, industryIds: ids } })
   }
 
+
+  // 行业地域导航 · 客户线索（drill-down）
+  if (url === '/misc/industry-leads' && method === 'get') {
+    let list = NAV_LEADS.slice()
+    if (params.industry) list = list.filter(x => x.industry === params.industry)
+    if (params.region) list = list.filter(x => x.region === params.region)
+    if (params.field) list = list.filter(x => x.field === params.field)
+    if (params.scenario) list = list.filter(x => x.scenario === params.scenario)
+    if (params.intent) {
+      const min = Number(params.intent)
+      list = list.filter(x => x.intent >= min)
+    }
+    return json({ results: list, total: list.length })
+  }
+  if (url === '/misc/industry-regions') {
+    return json({ results: { hotspots: NAV_REGION_HOTSPOTS, cities: NAV_CITIES } })
+  }
+  if (url === '/misc/industry-tree' && method === 'get') {
+    const ind = params.industry || ''
+    if (ind === '法律行业') {
+      return json({ results: { industry: ind, tree: NAV_LEGAL_TREE } })
+    }
+    // 其他行业：用词库主词/长尾词生成简化树
+    const lib = NAV_KEYWORD_LIB[ind] || { mainWords: [], longTailWords: [] }
+    const tree = {}
+    lib.mainWords.forEach((m, i) => {
+      tree[m] = { fields: { '常见需求': { scenarios: { [m + '咨询']: lib.longTailWords.slice(i * 2, i * 2 + 2) }, needs: [m + '服务咨询', m + '方案报价'] } } }
+    })
+    return json({ results: { industry: ind, tree } })
+  }
   // 系统管理
   if (url === '/admin/users' && method === 'get') {
     let list = [...SYS_USERS]
