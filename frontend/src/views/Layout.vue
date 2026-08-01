@@ -9,6 +9,7 @@
         <el-menu-item index="/dashboard"><el-icon><Odometer /></el-icon><span>数据大盘</span></el-menu-item>
         <el-menu-item index="/keywords"><el-icon><Search /></el-icon><span>关键词管理</span></el-menu-item>
         <el-menu-item index="/tasks"><el-icon><VideoPlay /></el-icon><span>任务中心</span></el-menu-item>
+        <el-menu-item index="/official"><el-icon><Connection /></el-icon><span>官方API采集</span></el-menu-item>
         <el-menu-item index="/leads"><el-icon><User /></el-icon><span>线索库</span></el-menu-item>
         <el-menu-item index="/heatmap"><el-icon><MapLocation /></el-icon><span>地图热力图</span></el-menu-item>
         <el-menu-item index="/analysis"><el-icon><MagicStick /></el-icon><span>AI 分析</span></el-menu-item>
@@ -54,7 +55,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { Cpu, DataAnalysis } from '@element-plus/icons-vue'
+import { Cpu, DataAnalysis, Connection } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { computed } from 'vue'
 import FloatingBubble from '../components/FloatingBubble.vue'
