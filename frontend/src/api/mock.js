@@ -711,6 +711,89 @@ function route(config) {
   if (url === '/crawler/config') {
     return json({ result: { min_interval: 3, max_per_minute: 20, retry_times: 3, mode: 'mock 演示模式' } })
   }
+  // ---------- 官方开放 API 合规采集 ----------
+  if (url === '/crawler/official/platforms') {
+    const names = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
+    return json({
+      results: Object.entries(names).map(([k, v]) => ({ platform: k, name: v, mode: 'demo', configured: false })),
+      compliance: {
+        channels: '仅使用各平台官方开放 API / 公开接口',
+        sensitive_data: '不采集手机号/微信号/私信/真实姓名等个人敏感信息',
+        actions: '不自动私信/不批量评论/不破解风控',
+        retention_days: 30,
+        audit: true
+      }
+    })
+  }
+  if (url === '/crawler/official/search' && method === 'get') {
+    const platform = params.platform || 'douyin'
+    const keyword = params.keyword || '客户需求'
+    const limit = Math.min(parseInt(params.limit || 5, 10), 50)
+    const names = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
+    const templates = [
+      '正在找' + keyword + '解决方案，有推荐吗？',
+      '想知道' + keyword + '哪家靠谱',
+      '刚接触' + keyword + '，求入门建议',
+      keyword + '供应商怎么选？预算有限',
+      keyword + '行业有哪些坑？',
+      '谁用过' + keyword + '，体验如何',
+      '想了解' + keyword + '的最新玩法',
+      keyword + '案例分享',
+      keyword + '合作渠道有哪些'
+    ]
+    const regions = ['广东', '浙江', '江苏', '北京', '上海', '四川']
+    const results = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
+      id: platform + '_demo_' + i,
+      platform,
+      platform_name: names[platform] || platform,
+      title: templates[i % templates.length],
+      content: '用户分享关于「' + keyword + '」的真实经历与需求, 希望寻找靠谱服务商。',
+      summary: '',
+      author: { nickname: '用户_' + Math.floor(1000 + Math.random() * 9000), gender: 'unknown', fans_count: Math.floor(Math.random() * 5000) },
+      url: 'https://demo.' + platform + '.com/post/' + i,
+      region: regions[i % regions.length],
+      like_count: Math.floor(Math.random() * 500),
+      comment_count: Math.floor(Math.random() * 100),
+      share_count: Math.floor(Math.random() * 50),
+      created_at: daysAgo(i),
+      source: 'demo',
+      collected_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    }))
+    return json({ results, platform, platform_name: names[platform] || platform, mode: 'demo', keyword, total: results.length })
+  }
+  if (url === '/crawler/official/search' && method === 'post') {
+    const searches = (body && body.searches) || []
+    const names = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
+    const out = searches.map((s, idx) => {
+      const platform = (s.platform || '').toLowerCase()
+      const keyword = s.keyword || ''
+      const limit = Math.min(parseInt(s.limit || 5, 10), 50)
+      const results = Array.from({ length: Math.min(limit, 3) }, (_, i) => ({
+        id: platform + '_demo_' + idx + '_' + i,
+        platform,
+        platform_name: names[platform] || platform,
+        title: '[' + (names[platform] || platform) + '] ' + keyword + ' 意向线索 ' + (i + 1),
+        content: '用户讨论「' + keyword + '」相关需求, 可能为潜在客户。',
+        author: { nickname: '用户_' + Math.floor(1000 + Math.random() * 9000), gender: 'unknown', fans_count: 0 },
+        url: 'https://demo.' + platform + '.com/post/' + idx + '_' + i,
+        region: '未知',
+        like_count: 0, comment_count: 0, share_count: 0,
+        created_at: daysAgo(i),
+        source: 'demo'
+      }))
+      return { platform, platform_name: names[platform] || platform, keyword, mode: 'demo', results, total: results.length }
+    })
+    return json({ results: out })
+  }
+  if (url === '/crawler/official/audit') {
+    const logs = [
+      { id: 'audit_1', platform: 'douyin', keyword: '装修', result_count: 5, mode: 'demo', ts: new Date().toISOString().slice(0, 19).replace('T', ' ') },
+      { id: 'audit_2', platform: 'weibo', keyword: '全屋定制', result_count: 3, mode: 'demo', ts: new Date(Date.now() - 3600000).toISOString().slice(0, 19).replace('T', ' ') },
+      { id: 'audit_3', platform: 'zhihu', keyword: '法律咨询', result_count: 4, mode: 'demo', ts: new Date(Date.now() - 7200000).toISOString().slice(0, 19).replace('T', ' ') }
+    ]
+    return json({ results: logs })
+  }
+
 
 
   // ---------- 商业化: 套餐/增值/优惠券 ----------
