@@ -42,6 +42,54 @@
         </div>
       </div>
 
+
+      <!-- 客户线索（行业地域导航 drill-down） -->
+      <el-divider content-position="left">客户线索 · 行业地域导航</el-divider>
+      <div class="flex" style="gap: 8px; flex-wrap: wrap; margin-bottom: 12px">
+        <el-select v-model="leadIndustry" filterable placeholder="线索行业" style="width: 180px" clearable @change="loadLeads">
+          <el-option v-for="ind in navIndustries" :key="ind.id" :label="ind.name" :value="ind.name" />
+        </el-select>
+        <el-select v-model="leadRegion" filterable placeholder="线索地域" style="width: 140px" clearable @change="loadLeads">
+          <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
+        </el-select>
+        <el-select v-model="leadField" filterable placeholder="细分领域" style="width: 160px" clearable @change="onLeadFieldChange">
+          <el-option v-for="f in leadFields" :key="f" :label="f" :value="f" />
+        </el-select>
+        <el-select v-model="leadScenario" filterable placeholder="问题场景" style="width: 160px" clearable @change="loadLeads">
+          <el-option v-for="s in leadScenarios" :key="s" :label="s" :value="s" />
+        </el-select>
+        <el-select v-model="leadIntent" filterable placeholder="意向分 ≥" style="width: 120px" clearable @change="loadLeads">
+          <el-option v-for="v in [60, 70, 80, 90]" :key="v" :label="v + ' 分以上'" :value="v" />
+        </el-select>
+        <el-button type="primary" plain @click="loadLeads">查询线索</el-button>
+        <el-button @click="resetLeads">重置</el-button>
+      </div>
+      <el-alert v-if="leadFields.length" :title="leadHint" type="info" :closable="false" show-icon style="margin-bottom: 12px" />
+      <el-table :data="leads" v-loading="leadsLoading" stripe class="mt16">
+        <el-table-column prop="industry" label="行业" width="130">
+          <template #default="{ row }"><el-tag size="small" type="primary" effect="plain">{{ row.industry }}</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="region" label="地域" width="90" />
+        <el-table-column prop="field" label="细分领域" width="120" />
+        <el-table-column prop="scenario" label="问题场景" width="130" />
+        <el-table-column prop="need" label="客户需求" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="contact" label="联系人" width="90" />
+        <el-table-column prop="phone" label="联系方式" width="120" />
+        <el-table-column prop="intent" label="意向分" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.intent >= 90 ? 'danger' : row.intent >= 80 ? 'warning' : 'info'" size="small">{{ row.intent }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" plain :disabled="row.status !== '待跟进'" @click="claimLead(row)">领取</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-if="!leads.length && !leadsLoading" style="text-align:center; color:#909399; padding: 24px 0">
+        暂无匹配线索，试试调整筛选条件或选择法律行业查看深度线索
+      </div>
+
       <!-- 行业词库弹窗 -->
       <el-dialog v-model="industryModal" :title="selectedIndustry ? selectedIndustry.name + ' · 获客词库' : '获客词库'" width="640px">
         <template v-if="selectedIndustry">
@@ -216,6 +264,100 @@ const libLongTailWords = ref([])
 const libNegativeWords = ref([])
 const libGlobalNegative = ref([])
 const applying = ref(false)
+
+
+// 客户线索（13 行业 drill-down）
+const leads = ref([])
+const leadsLoading = ref(false)
+const leadIndustry = ref('')
+const leadRegion = ref('')
+const leadField = ref('')
+const leadScenario = ref('')
+const leadIntent = ref(null)
+const leadFields = ref([])
+const leadScenarios = ref([])
+const leadHint = ref('')
+const claimedLeads = ref([])
+
+// 根据行业加载细分领域（drill-down）
+const loadLeadTree = async () => {
+  leadField.value = ''
+  leadScenario.value = ''
+  leadFields.value = []
+  leadScenarios.value = []
+  leadHint.value = ''
+  if (!leadIndustry.value) { loadLeads(); return }
+  try {
+    const data = await api.get('/misc/industry-tree', { params: { industry: leadIndustry.value } })
+    const tree = data.results.tree || {}
+    const fields = []
+    Object.keys(tree).forEach(main => {
+      Object.keys(tree[main].fields || {}).forEach(f => { if (!fields.includes(f)) fields.push(f) })
+    })
+    leadFields.value = fields
+    leadHint.value = leadIndustry.value === '法律行业'
+      ? '法律行业深度导航：' + fields.length + ' 个细分领域可选，点选领域后可继续选择问题场景'
+      : '已加载「' + leadIndustry.value + '」行业词库领域，可进一步筛选'
+  } catch (e) {
+    leadFields.value = []
+  }
+}
+
+const onLeadFieldChange = async () => {
+  leadScenario.value = ''
+  leadScenarios.value = []
+  if (!leadIndustry.value || !leadField.value) { loadLeads(); return }
+  try {
+    const data = await api.get('/misc/industry-tree', { params: { industry: leadIndustry.value } })
+    const tree = data.results.tree || {}
+    const scenarios = []
+    Object.keys(tree).forEach(main => {
+      const f = (tree[main].fields || {})[leadField.value]
+      if (f) Object.keys(f.scenarios || {}).forEach(s => { if (!scenarios.includes(s)) scenarios.push(s) })
+    })
+    leadScenarios.value = scenarios
+  } catch (e) {
+    leadScenarios.value = []
+  }
+  loadLeads()
+}
+
+const loadLeads = async () => {
+  leadsLoading.value = true
+  try {
+    const params = {}
+    if (leadIndustry.value) params.industry = leadIndustry.value
+    if (leadRegion.value) params.region = leadRegion.value
+    if (leadField.value) params.field = leadField.value
+    if (leadScenario.value) params.scenario = leadScenario.value
+    if (leadIntent.value) params.intent = leadIntent.value
+    const data = await api.get('/misc/industry-leads', { params })
+    leads.value = data.results || []
+  } finally {
+    leadsLoading.value = false
+  }
+}
+
+const resetLeads = () => {
+  leadIndustry.value = ''
+  leadRegion.value = ''
+  leadField.value = ''
+  leadScenario.value = ''
+  leadIntent.value = null
+  leadFields.value = []
+  leadScenarios.value = []
+  loadLeads()
+}
+
+const claimLead = async row => {
+  if (claimedLeads.value.includes(row.id)) {
+    ElMessage.warning('该线索已领取')
+    return
+  }
+  claimedLeads.value.push(row.id)
+  row.status = '已领取'
+  ElMessage.success('领取成功！线索已加入线索库')
+}
 
 // AI 拓词
 const expandVisible = ref(false)
@@ -425,6 +567,7 @@ onMounted(() => {
   loadGroups()
   loadNavData()
   loadLibraryList()
+  loadLeads()
 })
 </script>
 
