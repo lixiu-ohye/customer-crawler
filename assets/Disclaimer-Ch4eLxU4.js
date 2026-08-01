@@ -1,4 +1,4 @@
-import{E as g}from"./element-plus-Dyxpokyy.js";import{_ as k}from"./index-cP0Ss04Y.js";import{k as i,M as t,P as l,a0 as r,F as y,ae as V,W as d,Z as C,c as A,aj as c,L as s,$ as N,_ as m}from"./vue-vendor-BlNVQWYY.js";import"./axios-DBRE6jjL.js";const B={class:"page-card"},D={class:"disclaimer-box"},E={class:"mt16"},I={key:0,style:{"margin-left":"12px",color:"#67C23A","font-size":"13px"}},S={__name:"Disclaimer",setup(w){const a=i(!1),n=i(localStorage.getItem("disclaimerAccepted")==="1"),p=A(()=>`本平台提供的客户大数据采集与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
+import{E as g}from"./element-plus-Dyxpokyy.js";import{_ as k}from"./index-o2tTn5fJ.js";import{k as i,M as t,P as l,a0 as r,F as y,ae as V,W as d,Z as C,c as A,aj as c,L as s,$ as N,_ as m}from"./vue-vendor-BlNVQWYY.js";import"./axios-DBRE6jjL.js";const B={class:"page-card"},D={class:"disclaimer-box"},E={class:"mt16"},I={key:0,style:{"margin-left":"12px",color:"#67C23A","font-size":"13px"}},S={__name:"Disclaimer",setup(w){const a=i(!1),n=i(localStorage.getItem("disclaimerAccepted")==="1"),p=A(()=>`本平台提供的客户大数据采集与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
 使用本平台前，请您仔细阅读并理解以下条款：
 
 一、合法性声明
