@@ -125,3 +125,71 @@ class OfficialAuditView(APIView):
     def get(self, request):
         limit = min(int(request.query_params.get("limit", 100)), 500)
         return Response({"results": get_audit_records(limit)})
+
+
+class OfficialCredentialsView(APIView):
+    """
+    凭证热配置接口 (仅管理员):
+      GET    /api/crawler/official/credentials            查看当前配置状态 (凭证打码)
+      POST   /api/crawler/official/credentials            写入/更新某平台凭证 (存 Redis 热生效)
+        body: {"platform": "douyin", "credentials": {"client_key": "...", "client_secret": "..."}}
+      DELETE /api/crawler/official/credentials?platform=xxx   清除某平台 Redis 凭证 (回退 settings/env)
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _is_staff(self, request) -> bool:
+        return bool(request.user and getattr(request.user, "is_staff", False))
+
+    def get(self, request):
+        from apps.crawler.official_apis.base import OfficialAPIAdapter
+
+        redis_creds = OfficialAPIAdapter._redis_get_credentials()
+        out = {}
+        for platform, creds in redis_creds.items():
+            masked = {k: (v[:3] + "***" + v[-2:] if len(v) > 6 else "***") for k, v in creds.items() if v}
+            out[platform] = {"source": "redis", "credentials": masked}
+        for platform in PLATFORM_NAMES:
+            if platform not in out:
+                adapter = AdapterRegistry.get(platform)
+                if adapter and adapter.is_configured:
+                    out[platform] = {"source": "settings/env", "credentials": {}}
+                else:
+                    out[platform] = {"source": "none", "credentials": {}}
+        return Response({"results": out})
+
+    def post(self, request):
+        if not self._is_staff(request):
+            return Response({"detail": "仅管理员可配置凭证"}, status=403)
+        platform = str(request.data.get("platform", "")).lower()
+        creds = request.data.get("credentials") or {}
+        if platform not in PLATFORM_NAMES or not isinstance(creds, dict):
+            return Response({"detail": "平台或凭证格式无效"}, status=400)
+        from apps.crawler.official_apis.base import OfficialAPIAdapter
+
+        ok = OfficialAPIAdapter.set_credentials(platform, creds)
+        if not ok:
+            return Response({"detail": "写入失败 (Redis 不可用?)"}, status=500)
+        adapter = AdapterRegistry.get(platform)
+        return Response({
+            "ok": True,
+            "platform": platform,
+            "mode": adapter.mode if adapter else "unknown",
+            "configured": adapter.is_configured if adapter else False,
+        })
+
+    def delete(self, request):
+        if not self._is_staff(request):
+            return Response({"detail": "仅管理员可配置凭证"}, status=403)
+        platform = str(request.query_params.get("platform", "")).lower()
+        if platform not in PLATFORM_NAMES:
+            return Response({"detail": "平台无效"}, status=400)
+        from apps.crawler.official_apis.base import OfficialAPIAdapter
+
+        OfficialAPIAdapter.clear_credentials(platform)
+        adapter = AdapterRegistry.get(platform)
+        return Response({
+            "ok": True,
+            "platform": platform,
+            "mode": adapter.mode if adapter else "demo",
+        })
