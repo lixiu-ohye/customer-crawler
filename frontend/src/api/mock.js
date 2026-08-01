@@ -57,6 +57,8 @@ const LOGS = [
 ]
 
 const INDUSTRIES = ['装修', '全屋定制', '家装', '旧房改造', '办公室装修', '翻新', '整装', '装饰']
+// 官方 API 凭证热配置 (演示: 内存态)
+const MOCK_CREDENTIALS = {}
 const CITIES = ['北京', '上海', '广州', '深圳', '成都', '杭州', '南京', '武汉', '长沙', '重庆', '西安', '郑州', '岳阳', '周口']
 const INDUSTRY_DICT = {
   '装修': ['装修', '全屋定制', '整装', '家装', '旧房改造', '翻新'],
@@ -715,7 +717,10 @@ function route(config) {
   if (url === '/crawler/official/platforms') {
     const names = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
     return json({
-      results: Object.entries(names).map(([k, v]) => ({ platform: k, name: v, mode: 'demo', configured: false })),
+      results: Object.entries(names).map(([k, v]) => {
+        const cred = MOCK_CREDENTIALS[k]
+        return { platform: k, name: v, mode: cred && Object.keys(cred).length ? 'official_api' : 'demo', configured: !!(cred && Object.keys(cred).length), is_configured: !!(cred && Object.keys(cred).length) }
+      }),
       compliance: {
         channels: '仅使用各平台官方开放 API / 公开接口',
         sensitive_data: '不采集手机号/微信号/私信/真实姓名等个人敏感信息',
@@ -792,6 +797,44 @@ function route(config) {
       { id: 'audit_3', platform: 'zhihu', keyword: '法律咨询', result_count: 4, mode: 'demo', ts: new Date(Date.now() - 7200000).toISOString().slice(0, 19).replace('T', ' ') }
     ]
     return json({ results: logs })
+  }
+  // 凭证热配置 (演示: 内存态, 演示配置后该平台切换为 official_api 状态)
+  if (url === '/crawler/official/credentials') {
+    const pnames = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
+    if (method === 'get') {
+      const out = {}
+      for (const p of Object.keys(pnames)) {
+        const cred = MOCK_CREDENTIALS[p]
+        if (cred && Object.keys(cred).length) {
+          const masked = {}
+          for (const [k, v] of Object.entries(cred)) masked[k] = String(v).slice(0, 3) + '***' + String(v).slice(-2)
+          out[p] = { source: 'redis', credentials: masked }
+        } else {
+          out[p] = { source: 'none', credentials: {} }
+        }
+      }
+      return json({ results: out })
+    }
+    if (method === 'post') {
+      const platform = String(body.platform || '').toLowerCase()
+      const creds = body.credentials || {}
+      if (!pnames[platform] || typeof creds !== 'object') {
+        return json({ detail: '平台或凭证格式无效' }, 400)
+      }
+      MOCK_CREDENTIALS[platform] = {}
+      for (const [k, v] of Object.entries(creds)) {
+        if (v) MOCK_CREDENTIALS[platform][k] = String(v)
+      }
+      return json({ ok: true, platform, mode: 'official_api', configured: true })
+    }
+    if (method === 'delete') {
+      const platform = String(params.platform || '').toLowerCase()
+      if (pnames[platform]) {
+        delete MOCK_CREDENTIALS[platform]
+        return json({ ok: true, platform, mode: 'demo' })
+      }
+      return json({ detail: '平台无效' }, 400)
+    }
   }
 
 
