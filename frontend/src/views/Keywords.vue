@@ -16,7 +16,7 @@
       </div>
 
       <!-- 行业地域导航 · 12 行业获客词库 -->
-      <el-divider content-position="left">行业地域导航 · 自动联想</el-divider>
+      <el-divider content-position="left">行业地域导航 · 自动联想 · 客户线索</el-divider>
       <div class="flex" style="gap: 8px; flex-wrap: wrap; margin-bottom: 12px">
         <el-select v-model="navIndustry" filterable placeholder="选择行业" style="width: 220px" @change="loadNav">
           <el-option v-for="ind in navIndustries" :key="ind.id" :label="ind.name" :value="ind.name" />
@@ -43,8 +43,7 @@
       </div>
 
 
-      <!-- 客户线索（行业地域导航 drill-down） -->
-      <el-divider content-position="left">客户线索 · 行业地域导航</el-divider>
+      <div class="lead-section-title">📋 客户线索（按行业 · 地域 · 领域 · 场景筛选 · 高意向优先）</div>
       <div class="flex" style="gap: 8px; flex-wrap: wrap; margin-bottom: 12px">
         <el-select v-model="leadIndustry" filterable placeholder="线索行业" style="width: 180px" clearable @change="loadLeads">
           <el-option v-for="ind in navIndustries" :key="ind.id" :label="ind.name" :value="ind.name" />
@@ -598,6 +597,15 @@ onMounted(() => {
   color: #606266;
   font-weight: 600;
   padding-top: 4px;
+}
+
+.lead-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin: 14px 0 10px;
+  padding-left: 10px;
+  border-left: 3px solid #409EFF;
 }
 
 .industry-grid {
