@@ -475,7 +475,7 @@ const isFollowed = id => followedIndustries.value.some(x => x.id === id)
 
 const loadFollowed = async () => {
   try {
-    const data = await api.get('/promoter/industries')
+    const data = await api.get('/keywords/promoter-industries')
     followedIndustries.value = data.results.industries || []
   } catch (e) {
     followedIndustries.value = []
@@ -484,14 +484,14 @@ const loadFollowed = async () => {
 
 const followIndustry = async id => {
   const ids = [...followedIndustries.value.map(x => x.id), id]
-  await api.post('/promoter/industries', { industryIds: ids })
+  await api.post('/keywords/promoter-industries', { industryIds: ids })
   ElMessage.success('关注成功')
   loadFollowed()
 }
 
 const unfollowIndustry = async id => {
   const ids = followedIndustries.value.filter(x => x.id !== id).map(x => x.id)
-  await api.post('/promoter/industries', { industryIds: ids })
+  await api.post('/keywords/promoter-industries', { industryIds: ids })
   ElMessage.success('已取消关注')
   loadFollowed()
 }

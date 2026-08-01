@@ -616,12 +616,12 @@ function route(config) {
     }
     return json({ results: { industries: NAV_INDUSTRIES, cities: NAV_CITIES, keywords: {} } })
   }
-  if (url === '/promoter/industries' && method === 'get') {
+  if (url === '/keywords/promoter-industries' && method === 'get') {
     const saved = ((typeof localStorage !== 'undefined' ? localStorage.getItem('promoter_industries') : '') || '').split(',').filter(Boolean).map(Number)
     const list = NAV_INDUSTRIES.filter(x => saved.includes(x.id))
     return json({ results: { industries: list.map(x => ({ id: x.id, name: x.name, description: x.description })) } })
   }
-  if (url === '/promoter/industries' && method === 'post') {
+  if (url === '/keywords/promoter-industries' && method === 'post') {
     const ids = (body.industryIds || []).map(Number)
     if (typeof localStorage !== 'undefined') localStorage.setItem('promoter_industries', ids.join(','))
     return json({ result: { saved: ids.length, industryIds: ids } })
@@ -631,10 +631,10 @@ function route(config) {
   // 行业地域导航 · 客户线索（drill-down）
   if (url === '/misc/industry-leads' && method === 'get') {
     let list = NAV_LEADS.slice()
-    if (params.industry) list = list.filter(x => x.industry === params.industry)
-    if (params.region) list = list.filter(x => x.region === params.region)
-    if (params.field) list = list.filter(x => x.field === params.field)
-    if (params.scenario) list = list.filter(x => x.scenario === params.scenario)
+    if (params.industry) list = list.filter(x => params.industry.includes(x.industry) || x.industry.includes(params.industry))
+    if (params.region) list = list.filter(x => params.region.includes(x.region) || x.region.includes(params.region))
+    if (params.field) list = list.filter(x => params.field.includes(x.field) || x.field.includes(params.field))
+    if (params.scenario) list = list.filter(x => params.scenario.includes(x.scenario) || x.scenario.includes(params.scenario))
     if (params.intent) {
       const min = Number(params.intent)
       list = list.filter(x => x.intent >= min)
