@@ -44,9 +44,67 @@
           </el-form>
           <el-alert type="info" :closable="false" class="mt8">
             <template #title>
-              当前为<strong>演示模式</strong>（demo），未配置平台官方 API 凭证。接入真实凭证后自动切换为官方接口采集。
+              <template v-if="currentPlatformConfigured">
+                当前平台已配置官方凭证，将以<strong>官方 API 模式</strong>采集（<el-tag size="small" type="success">official_api</el-tag>）
+              </template>
+              <template v-else>
+                当前为<strong>演示模式</strong>（demo），未配置平台官方 API 凭证。接入真实凭证后自动切换为官方接口采集。
+              </template>
             </template>
           </el-alert>
+        </el-card>
+
+        <el-card shadow="never" class="mb16">
+          <template #header>
+            <div class="card-header">
+              <span>平台凭证配置</span>
+              <el-tag v-if="credSaving" size="small" type="warning">保存中…</el-tag>
+            </div>
+          </template>
+          <el-table :data="platforms" size="small">
+            <el-table-column label="平台" width="90">
+              <template #default="{ row }">
+                {{ row.name }}
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }">
+                <el-tag size="small" :type="row.is_configured ? 'success' : 'info'">
+                  {{ row.is_configured ? '官方API' : '演示' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="凭证">
+              <template #default="{ row }">
+                <el-input
+                  v-if="credForm.platform === row.platform"
+                  v-model="credForm.token"
+                  size="small"
+                  placeholder="粘贴 App Key / Token"
+                  clearable
+                />
+                <span v-else class="cred-hint">{{ row.cred_hint || '未配置' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="140" align="right">
+              <template #default="{ row }">
+                <el-button v-if="credForm.platform !== row.platform" size="small" text type="primary" @click="startCredEdit(row)">
+                  配置
+                </el-button>
+                <template v-else>
+                  <el-button size="small" type="primary" @click="saveCred(row)">保存</el-button>
+                  <el-button size="small" text @click="credForm.platform = ''">取消</el-button>
+                </template>
+                <el-button
+                  v-if="row.is_configured && credForm.platform !== row.platform"
+                  size="small"
+                  text
+                  type="danger"
+                  @click="clearCred(row)"
+                >清除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </el-card>
 
         <el-card shadow="never">
@@ -91,7 +149,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import api from '../api'
@@ -101,6 +159,13 @@ const results = ref([])
 const auditLogs = ref([])
 const loading = ref(false)
 const searchInfo = reactive({ mode: '' })
+const credForm = reactive({ platform: '', token: '' })
+const credSaving = ref(false)
+
+const currentPlatformConfigured = computed(() => {
+  const p = platforms.value.find(x => x.platform === form.platform)
+  return !!(p && p.is_configured)
+})
 
 const form = reactive({
   platform: 'douyin',
@@ -112,6 +177,69 @@ const loadPlatforms = async () => {
   const res = await api.get('/crawler/official/platforms')
   platforms.value = res.results || []
   if (platforms.value.length) form.platform = platforms.value[0].platform
+  loadCredStatus()
+}
+
+const loadCredStatus = async () => {
+  try {
+    const res = await api.get('/crawler/official/credentials')
+    const status = res.results || {}
+    platforms.value = (platforms.value || []).map(p => {
+      const st = status[p.platform] || {}
+      return {
+        ...p,
+        is_configured: !!st.source && st.source !== 'none',
+        cred_hint: st.source === 'redis' ? '已配置 (热生效)' : (st.source === 'settings/env' ? 'settings 配置' : '')
+      }
+    })
+  } catch (e) {
+    // 凭证接口不可用时静默 (演示环境)
+  }
+}
+
+const startCredEdit = (row) => {
+  credForm.platform = row.platform
+  credForm.token = ''
+}
+
+const saveCred = async (row) => {
+  if (!credForm.token.trim()) return ElMessage.warning('请输入凭证')
+  credSaving.value = true
+  try {
+    const key = row.platform === 'douyin' ? 'client_key' : (row.platform === 'xiaohongshu' ? 'app_id' : (row.platform === 'kuaishou' ? 'app_key' : 'token'))
+    const secretKey = row.platform === 'douyin' ? 'client_secret' : (row.platform === 'xiaohongshu' || row.platform === 'kuaishou' ? 'app_secret' : null)
+    const credentials = { [key]: credForm.token.trim() }
+    if (secretKey) credentials[secretKey] = 'configured_via_ui'
+    const res = await api.post('/crawler/official/credentials', {
+      platform: row.platform,
+      credentials
+    })
+    if (res.ok) {
+      ElMessage.success(`「${row.name}」已切换为官方 API 模式`)
+      credForm.platform = ''
+      loadPlatforms()
+    } else {
+      ElMessage.error(res.detail || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败')
+  } finally {
+    credSaving.value = false
+  }
+}
+
+const clearCred = async (row) => {
+  try {
+    const res = await api.delete('/crawler/official/credentials', {
+      params: { platform: row.platform }
+    })
+    if (res.ok) {
+      ElMessage.success(`「${row.name}」已清除凭证，回退演示模式`)
+      loadPlatforms()
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '清除失败')
+  }
 }
 
 const loadAudit = async () => {
@@ -174,4 +302,5 @@ onMounted(() => {
 .title { margin: 0; font-size: 16px; font-weight: 600; }
 .desc { margin: 4px 0 0; font-size: 12px; color: #909399; }
 .compliance-tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.cred-hint { font-size: 12px; color: #909399; }
 </style>
