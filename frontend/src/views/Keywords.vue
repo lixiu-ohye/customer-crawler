@@ -65,7 +65,8 @@
         <el-button @click="resetLeads">重置</el-button>
       </div>
       <el-alert v-if="leadFields.length" :title="leadHint" type="info" :closable="false" show-icon style="margin-bottom: 12px" />
-      <el-table :data="leads" v-loading="leadsLoading" stripe class="mt16">
+      <el-table :data="pagedLeads" v-loading="leadsLoading" stripe class="mt16" @selection-change="onLeadSelect">
+        <el-table-column type="selection" width="44" />
         <el-table-column prop="industry" label="行业" width="130">
           <template #default="{ row }"><el-tag size="small" type="primary" effect="plain">{{ row.industry }}</el-tag></template>
         </el-table-column>
@@ -80,15 +81,60 @@
             <el-tag :type="row.intent >= 90 ? 'danger' : row.intent >= 80 ? 'warning' : 'info'" size="small">{{ row.intent }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
+            <el-button size="small" @click="openLeadDetail(row)">详情</el-button>
             <el-button size="small" type="primary" plain :disabled="row.status !== '待跟进'" @click="claimLead(row)">领取</el-button>
           </template>
         </el-table-column>
+        <div class="flex" style="gap: 8px; margin: 10px 0; align-items: center">
+          <el-button size="small" type="success" plain :disabled="!selectedLeads.length" @click="batchClaim">批量领取（{{ selectedLeads.length }}）</el-button>
+          <span style="font-size: 12px; color: #909399">已领取 {{ claimedLeads.length }} 条 · 共 {{ leads.length }} 条</span>
+        </div>
+        <el-pagination
+          v-model:current-page="leadPage"
+          :page-size="leadPageSize"
+          :total="leads.length"
+          layout="prev, pager, next, total"
+          small
+          background
+          style="justify-content: flex-end; margin-top: 8px"
+        />
       </el-table>
       <div v-if="!leads.length && !leadsLoading" style="text-align:center; color:#909399; padding: 24px 0">
         暂无匹配线索，试试调整筛选条件或选择法律行业查看深度线索
       </div>
+
+      <!-- 线索详情弹窗 -->
+      <el-dialog v-model="leadDetailVisible" title="线索详情" width="520px" append-to-body>
+        <template v-if="currentLead">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="行业">{{ currentLead.industry }}</el-descriptions-item>
+            <el-descriptions-item label="地域">{{ currentLead.region }}</el-descriptions-item>
+            <el-descriptions-item label="细分领域">{{ currentLead.field || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="问题场景">{{ currentLead.scenario || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="联系人">{{ currentLead.contact }}</el-descriptions-item>
+            <el-descriptions-item label="联系方式">{{ currentLead.phone }}</el-descriptions-item>
+            <el-descriptions-item label="意向分">
+              <el-tag :type="currentLead.intent >= 90 ? 'danger' : currentLead.intent >= 80 ? 'warning' : 'info'" size="small">{{ currentLead.intent }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="currentLead.status === '已领取' ? 'success' : 'primary'" size="small">{{ currentLead.status }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="抓取时间" :span="2">{{ currentLead.created_at }}</el-descriptions-item>
+            <el-descriptions-item label="客户需求" :span="2">{{ currentLead.need }}</el-descriptions-item>
+            <el-descriptions-item label="标签" :span="2">
+              <el-tag v-for="t in (currentLead.tags || [])" :key="t" size="small" type="info" effect="plain" class="mr4">{{ t }}</el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
+        </template>
+        <template #footer>
+          <el-button @click="leadDetailVisible = false">关闭</el-button>
+          <el-button type="primary" plain :disabled="currentLead && currentLead.status !== '待跟进'" @click="claimLead(currentLead); leadDetailVisible = false">
+            领取此线索
+          </el-button>
+        </template>
+      </el-dialog>
 
       <!-- 行业词库弹窗 -->
       <el-dialog v-model="industryModal" :title="selectedIndustry ? selectedIndustry.name + ' · 获客词库' : '获客词库'" width="640px">
@@ -124,38 +170,6 @@
           <el-button @click="industryModal = false">关闭</el-button>
         </template>
       </el-dialog>
-
-      <!-- 行业词库（12 大行业） -->
-      <el-divider content-position="left">行业词库 · 12 大行业精选词（一键导入）</el-divider>
-      <div class="flex" style="gap: 8px; flex-wrap: wrap; margin-bottom: 12px">
-        <el-select v-model="libIndustry" filterable placeholder="选择行业词库" style="width: 220px" @change="loadLibrary">
-          <el-option v-for="ind in libIndustries" :key="ind" :label="ind" :value="ind" />
-        </el-select>
-        <el-button v-if="libIndustry" type="warning" :loading="applying" @click="applyLibrary">
-          一键导入「{{ libIndustry }}」
-        </el-button>
-        <span v-if="libIndustry" style="font-size: 12px; color: #909399">
-          共 {{ libMainWords.length + libLongTailWords.length }} 词 · 自动分组「行业词库-{{ libIndustry }}」
-        </span>
-      </div>
-      <div v-if="libIndustry" class="lib-box">
-        <div class="lib-row">
-          <span class="lib-label">主词</span>
-          <el-tag v-for="w in libMainWords" :key="w" type="primary" class="mr4 mb4" closable @close="addLibWord(w)">{{ w }}</el-tag>
-        </div>
-        <div class="lib-row">
-          <span class="lib-label">长尾词</span>
-          <el-tag v-for="w in libLongTailWords" :key="w" type="success" class="mr4 mb4" closable @close="addLibWord(w)">{{ w }}</el-tag>
-        </div>
-        <div class="lib-row">
-          <span class="lib-label">行业否定词</span>
-          <el-tag v-for="w in libNegativeWords" :key="w" type="info" class="mr4 mb4">{{ w }}</el-tag>
-        </div>
-        <div class="lib-row" v-if="libGlobalNegative.length">
-          <span class="lib-label">全局否定词</span>
-          <el-tag v-for="w in libGlobalNegative" :key="w" type="danger" effect="plain" class="mr4 mb4">{{ w }}</el-tag>
-        </div>
-      </div>
 
       <el-table :data="list" v-loading="loading" class="mt16" stripe>
         <el-table-column prop="word" label="关键词" min-width="140" />
@@ -229,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 
@@ -256,13 +270,7 @@ const modalNegativeWords = ref([])
 const modalGlobalNegative = ref([])
 const followedIndustries = ref([])
 
-// 行业词库
-const libIndustries = ref([])
-const libIndustry = ref('')
-const libMainWords = ref([])
-const libLongTailWords = ref([])
-const libNegativeWords = ref([])
-const libGlobalNegative = ref([])
+
 const applying = ref(false)
 
 
@@ -278,6 +286,15 @@ const leadFields = ref([])
 const leadScenarios = ref([])
 const leadHint = ref('')
 const claimedLeads = ref([])
+const selectedLeads = ref([])
+const leadPage = ref(1)
+const leadPageSize = ref(10)
+const leadDetailVisible = ref(false)
+const currentLead = ref(null)
+const pagedLeads = computed(() => {
+  const start = (leadPage.value - 1) * leadPageSize.value
+  return leads.value.slice(start, start + leadPageSize.value)
+})
 
 // 根据行业加载细分领域（drill-down）
 const loadLeadTree = async () => {
@@ -333,6 +350,7 @@ const loadLeads = async () => {
     if (leadIntent.value) params.intent = leadIntent.value
     const data = await api.get('/misc/industry-leads', { params })
     leads.value = data.results || []
+    leadPage.value = 1
   } finally {
     leadsLoading.value = false
   }
@@ -357,6 +375,32 @@ const claimLead = async row => {
   claimedLeads.value.push(row.id)
   row.status = '已领取'
   ElMessage.success('领取成功！线索已加入线索库')
+}
+
+const openLeadDetail = row => {
+  currentLead.value = row
+  leadDetailVisible.value = true
+}
+
+const onLeadSelect = rows => {
+  selectedLeads.value = rows
+}
+
+const batchClaim = () => {
+  if (!selectedLeads.value.length) {
+    ElMessage.warning('请先勾选线索')
+    return
+  }
+  let n = 0
+  selectedLeads.value.forEach(row => {
+    if (!claimedLeads.value.includes(row.id) && row.status === '待跟进') {
+      claimedLeads.value.push(row.id)
+      row.status = '已领取'
+      n++
+    }
+  })
+  if (n) ElMessage.success('批量领取成功，共 ' + n + ' 条')
+  else ElMessage.warning('所选线索均已领取')
 }
 
 // AI 拓词
@@ -459,44 +503,6 @@ const addFromNav = async kw => {
   load()
 }
 
-// ---------- 行业词库 ----------
-const loadLibraryList = async () => {
-  try {
-    const data = await api.get('/keywords/industry-library')
-    libIndustries.value = data.result.industries
-  } catch (e) {
-    libIndustries.value = []
-  }
-}
-
-const loadLibrary = async () => {
-  if (!libIndustry.value) return
-  const data = await api.get('/keywords/industry-library', { params: { industry: libIndustry.value } })
-  libMainWords.value = data.result.mainWords || []
-  libLongTailWords.value = data.result.longTailWords || []
-  libNegativeWords.value = data.result.negativeWords || []
-  libGlobalNegative.value = data.result.globalNegativeWords || []
-}
-
-const addLibWord = async w => {
-  await api.post('/keywords/', { word: w, negative_words: libNegativeWords.value.join(',') })
-  ElMessage.success(`已添加「${w}」`)
-  load()
-}
-
-const applyLibrary = async () => {
-  if (!libIndustry.value) return
-  applying.value = true
-  try {
-    const data = await api.post('/keywords/industry-apply', { industry: libIndustry.value })
-    ElMessage.success(`已导入 ${data.result.created} 个词（跳过 ${data.result.skipped} 个重复）`)
-    load()
-    loadGroups()
-  } finally {
-    applying.value = false
-  }
-}
-
 const openAdd = () => {
   editing.value = null
   Object.assign(form, { word: '', group: null, negative_words: '' })
@@ -566,7 +572,6 @@ onMounted(() => {
   load()
   loadGroups()
   loadNavData()
-  loadLibraryList()
   loadLeads()
 })
 </script>
