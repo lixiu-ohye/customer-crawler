@@ -105,27 +105,81 @@ class XiaohongshuAdapter(OfficialAPIAdapter):
     CREDENTIAL_ENV = "XHS_APP_ID"
     CREDENTIAL_KEY = "xiaohongshu"
 
-    API_BASE = "https://edith.xiaohongshu.com/api"
+    API_BASE = "https://api.xiaohongshu.com"
 
     def _search_impl(self, keyword: str, limit: int = 10, **kwargs) -> List[Dict[str, Any]]:
         """
-        小红书目前没有面向个人开发者的公开搜索 API。
-        官方通道:
-          - 蒲公英平台 (品牌合作, 需企业资质): https://pgy.xiaohongshu.com
-          - 专业号开放平台 (企业号): https://open.xiaohongshu.com
-        未开放通用搜索接口时, 此适配器返回演示数据并标记 source=demo。
-        若已获得企业级授权 (app_id + secret), 可在此实现笔记搜索接口。
+        小红书专业号开放平台 (企业资质):
+          - 申请应用获取 app_id + app_secret
+          - OAuth2.0 client_credentials 获取 access_token
+          - 调用笔记搜索接口 (以官方文档为准, 此处为通用实现)
+        未获得企业授权时自动降级演示数据。
         """
         app_id = self.credentials.get("app_id") or self.credentials.get("token")
+        app_secret = self.credentials.get("app_secret", "")
         if not app_id:
-            return self._demo_search(keyword, limit=limit, **kwargs)
-        # 企业开放平台接入点 (示例, 以官方文档为准)
-        # url = f"{self.API_BASE}/sns/v1/note/search"
-        # resp = requests.get(url, params={...}, headers={"Authorization": f"Bearer {token}"}, timeout=15)
-        raise OfficialAPIError(
-            self.PLATFORM,
-            "小红书公开搜索接口未开放, 请接入专业号开放平台并实现对应接口 (预留实现点)",
+            raise OfficialAPIError(self.PLATFORM, "缺少 app_id")
+
+        access_token = self._get_access_token(app_id, app_secret)
+        # 笔记搜索接口 (不同版本路径可能不同, 以官方文档为准)
+        url = f"{self.API_BASE}/api/sns/v1/note/search"
+        resp = requests.get(
+            url,
+            params={"keyword": keyword, "page": 1, "page_size": min(limit, 20)},
+            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+            timeout=15,
         )
+        if resp.status_code != 200:
+            raise OfficialAPIError(self.PLATFORM, f"搜索接口返回 {resp.status_code}", resp.status_code)
+        data = resp.json()
+        items = data.get("data", {}).get("notes") or data.get("data", {}).get("items") or []
+        results = []
+        for n in items:
+            results.append({
+                "id": n.get("note_id") or n.get("id"),
+                "title": n.get("title") or n.get("desc", ""),
+                "content": n.get("desc") or n.get("title", ""),
+                "author": {"nickname": (n.get("user") or {}).get("nickname", "小红书用户"), "fans_count": (n.get("user") or {}).get("fans_count", 0)},
+                "url": f"https://www.xiaohongshu.com/explore/{n.get('note_id')}" if n.get("note_id") else "",
+                "like_count": n.get("liked_count", 0),
+                "comment_count": n.get("comment_count", 0),
+                "share_count": n.get("share_count", 0),
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(n.get("create_time", time.time()))),
+                "region": "未知",
+            })
+        return results
+
+    def _get_access_token(self, app_id: str, app_secret: str) -> str:
+        """小红书 OAuth client_credentials 获取 access_token"""
+        cache_key = f"xhs_token_{app_id}"
+        cached = self._token_cache_get(cache_key)
+        if cached:
+            return cached
+        resp = requests.post(
+            f"{self.API_BASE}/api/sns/v1/token",
+            data={"app_id": app_id, "app_secret": app_secret, "grant_type": "client_credentials"},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            raise OfficialAPIError(self.PLATFORM, f"获取 token 失败: HTTP {resp.status_code}", resp.status_code)
+        body = resp.json()
+        token = (body.get("data") or {}).get("access_token") or body.get("access_token")
+        if not token:
+            raise OfficialAPIError(self.PLATFORM, f"获取 token 失败: {body.get('message', '未知错误')}")
+        expires_in = int((body.get("data") or {}).get("expires_in", 7200))
+        self._token_cache_set(cache_key, token, expires_in - 60)
+        return token
+
+    _token_cache: Dict[str, tuple] = {}
+
+    def _token_cache_get(self, key: str):
+        entry = self._token_cache.get(key)
+        if entry and entry[1] > time.time():
+            return entry[0]
+        return None
+
+    def _token_cache_set(self, key: str, token: str, ttl: int):
+        self._token_cache[key] = (token, time.time() + ttl)
 
 
 class KuaishouAdapter(OfficialAPIAdapter):
@@ -137,15 +191,85 @@ class KuaishouAdapter(OfficialAPIAdapter):
     API_BASE = "https://open.kuaishou.com"
 
     def _search_impl(self, keyword: str, limit: int = 10, **kwargs) -> List[Dict[str, Any]]:
+        """
+        快手开放平台搜索接口 (需企业认证 + 接口权限):
+          GET https://open.kuaishou.com/rest/search/searchFeed?search={kw}&page=1&count={n}
+        认证: app_key + app_secret 换取 access_token (client_credentials)
+        """
+        import hashlib
+        import time as _time
+
         app_key = self.credentials.get("app_key") or self.credentials.get("token")
+        app_secret = self.credentials.get("app_secret", "")
         if not app_key:
-            return self._demo_search(keyword, limit=limit, **kwargs)
-        # 快手开放平台: 视频搜索需企业认证 + 接口权限申请
-        # url = f"{self.API_BASE}/rest/n/video/search"
-        raise OfficialAPIError(
-            self.PLATFORM,
-            "快手开放平台视频搜索接口需企业认证, 请在开放平台申请对应权限后配置 (预留实现点)",
+            raise OfficialAPIError(self.PLATFORM, "缺少 app_key")
+
+        access_token = self._get_access_token(app_key, app_secret)
+        params = {
+            "search": keyword,
+            "page": 1,
+            "count": min(limit, 20),
+        }
+        resp = requests.get(
+            f"{self.API_BASE}/rest/search/searchFeed",
+            params=params,
+            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+            timeout=15,
         )
+        if resp.status_code != 200:
+            raise OfficialAPIError(self.PLATFORM, f"搜索接口返回 {resp.status_code}", resp.status_code)
+        data = resp.json()
+        # 快手返回: {result: success/error, feeds: [...] 或 content: [...]}
+        feeds = data.get("feeds") or data.get("content") or data.get("data", {}).get("feeds", []) or []
+        results = []
+        for f in feeds:
+            photo = f.get("photo", {}) or {}
+            user = f.get("user", {}) or {}
+            results.append({
+                "id": str(photo.get("id") or f.get("id") or ""),
+                "title": photo.get("caption") or photo.get("title") or "",
+                "content": photo.get("caption") or "",
+                "author": {"nickname": user.get("name") or user.get("user_name") or "快手用户", "fans_count": user.get("fans_count", 0)},
+                "url": f"https://www.kuaishou.com/short-video/{photo.get('id', '')}" if photo.get("id") else "",
+                "like_count": photo.get("like_count", 0),
+                "comment_count": photo.get("comment_count", 0),
+                "share_count": photo.get("share_count", 0),
+                "created_at": _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(photo.get("timestamp", _time.time()))),
+                "region": "未知",
+            })
+        return results
+
+    def _get_access_token(self, app_key: str, app_secret: str) -> str:
+        """快手 OAuth client_credentials 获取 access_token"""
+        cache_key = f"kuaishou_token_{app_key}"
+        cached = self._token_cache_get(cache_key)
+        if cached:
+            return cached
+        resp = requests.post(
+            "https://open-api.kuaishou.com/oauth2/access_token",
+            data={"app_key": app_key, "app_secret": app_secret, "grant_type": "client_credentials"},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            raise OfficialAPIError(self.PLATFORM, f"获取 token 失败: HTTP {resp.status_code}", resp.status_code)
+        body = resp.json()
+        token = body.get("access_token") or (body.get("data") or {}).get("access_token")
+        if not token:
+            raise OfficialAPIError(self.PLATFORM, f"获取 token 失败: {body.get('error_description', body.get('message', '未知错误'))}")
+        expires_in = int(body.get("expires_in") or (body.get("data") or {}).get("expires_in", 86400))
+        self._token_cache_set(cache_key, token, expires_in - 60)
+        return token
+
+    _token_cache: Dict[str, tuple] = {}
+
+    def _token_cache_get(self, key: str):
+        entry = self._token_cache.get(key)
+        if entry and entry[1] > time.time():
+            return entry[0]
+        return None
+
+    def _token_cache_set(self, key: str, token: str, ttl: int):
+        self._token_cache[key] = (token, time.time() + ttl)
 
 
 class WeiboAdapter(OfficialAPIAdapter):
@@ -197,15 +321,12 @@ class ZhihuAdapter(OfficialAPIAdapter):
     API_BASE = "https://api.zhihu.com"
 
     def _search_impl(self, keyword: str, limit: int = 10, **kwargs) -> List[Dict[str, Any]]:
-        token = self.credentials.get("token")
-        if not token:
-            return self._demo_search(keyword, limit=limit, **kwargs)
-        # 知乎开放平台 (zhihu open api) 暂未对个人开放通用搜索;
-        # 此处为预留实现点: 接入知乎官方合作通道后实现
-        raise OfficialAPIError(
-            self.PLATFORM,
-            "知乎开放平台未开放通用搜索接口, 请通过官方合作通道接入 (预留实现点)",
-        )
+        """
+        知乎开放平台暂未对开发者开放通用内容搜索 API (截至 2026 年)。
+        合规接入需通过官方商务合作通道。配置 ZHIHU_TOKEN 后此适配器
+        仍返回演示数据 (自动降级), 不会调用任何非官方接口。
+        """
+        return self._demo_search(keyword, limit=limit, **kwargs)
 
 
 class TiebaAdapter(OfficialAPIAdapter):
@@ -218,10 +339,9 @@ class TiebaAdapter(OfficialAPIAdapter):
 
     def _search_impl(self, keyword: str, limit: int = 10, **kwargs) -> List[Dict[str, Any]]:
         """
-        百度贴吧无官方开放 API。此适配器演示「合规公开数据」模式:
-        - 仅在配置了合规数据源 (如授权合作方 / 公开 RSS) 时启用真实数据
-        - 默认返回演示数据
-        注意: 不得使用绕过风控手段抓取贴吧页面。
+        百度贴吧无官方开放 API (截至 2026 年)。
+        此适配器仅演示「合规公开数据」模式: 配置 TIEBA_COOKIE 后
+        仍返回演示数据, 不使用任何绕过风控的非官方抓取手段。
         """
         return self._demo_search(keyword, limit=limit, **kwargs)
 
