@@ -1,52 +1,28 @@
 // 演示数据层：GitHub Pages 静态环境无后端 API，用 Mock 数据让全站可演示
 // 数据结构与 Django 后端 API 完全一致
 
+// 真实数据快照（由 backend/export_real_data.py 从数据库导出）
+import realData from './real-data.json'
+
 const NOW = Date.now()
 const daysAgo = n => {
   const d = new Date(NOW - n * 86400000)
   return d.toISOString().replace('T', ' ').slice(0, 19)
 }
 
-// ---------- 演示线索数据 ----------
-const LEADS = [
-  { id: 1, platform: 'weibo', title: '成都装修求推荐！刚拿到新房钥匙，140平想找靠谱的全屋定制公司', author: '蓉城新居', content: '刚在成都高新区拿到新房，140平，想找靠谱的全屋定制公司，环保板材优先，预算30万以内。有装过的朋友推荐一下吗？', summary: '成都高新区新房140平，求全屋定制公司推荐，环保板材优先，预算30万', region: '成都', demand: '全屋定制', intent_score: 86, intent_label: 'high', url: 'https://weibo.com', like_count: 12, comment_count: 8, share_count: 3, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(0) },
-  { id: 2, platform: 'xiaohongshu', title: '旧房改造日记｜老破小变身奶油风，附改造清单', author: '小鹿装修记', content: '坐标广州，30年老破小改造完成！拆改、水电、全屋定制一站式搞定，总花费18万。分享我的改造清单和避坑指南，装修公司对比了好几家。', summary: '广州老破小改造完成，分享改造清单和装修公司对比经验', region: '广州', demand: '旧房改造', intent_score: 74, intent_label: 'high', url: 'https://www.xiaohongshu.com', like_count: 342, comment_count: 56, share_count: 21, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(0) },
-  { id: 3, platform: 'douyin', title: '上海办公室装修，300平创意园区，求设计公司', author: '沪上创业人', content: '公司新租了300平的创意园区办公室，想找上海本地的办公室装修设计公司，现代简约风，工期45天左右，有推荐的吗？预算80万。', summary: '上海300平办公室装修需求，求本地设计公司', region: '上海', demand: '办公室装修', intent_score: 91, intent_label: 'high', url: 'https://www.douyin.com', like_count: 3, comment_count: 5, share_count: 1, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(1) },
-  { id: 4, platform: 'zhihu', title: '全屋定制和木工现场打柜子到底哪个好？', author: '家居老司机', content: '准备装修了，全屋定制和木工现场打柜子纠结中。定制贵但好看，木工便宜但怕手艺不行。有没有过来人说说？坐标杭州。', summary: '杭州业主纠结全屋定制与木工打柜，寻求建议', region: '杭州', demand: '全屋定制', intent_score: 58, intent_label: 'medium', url: 'https://www.zhihu.com', like_count: 45, comment_count: 89, share_count: 12, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(1) },
-  { id: 5, platform: 'tieba', title: '农村自建房装修，两层小楼，怎么省钱又好看？', author: '回乡建房的阿伟', content: '老家两层自建房准备装修，预算20万以内，湖南岳阳。想要现代简约风，本地装修公司靠谱吗？求推荐岳阳本地的装修队。', summary: '湖南岳阳自建房装修，预算20万求本地装修队', region: '岳阳', demand: '家装', intent_score: 62, intent_label: 'medium', url: 'https://tieba.baidu.com', like_count: 8, comment_count: 15, share_count: 2, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(2) },
-  { id: 6, platform: 'weibo', title: '避雷！某装修公司收了定金跑路了，大家擦亮眼睛', author: '装修维权中', content: '曝光！XX装修公司收了3万定金后失联，还在多个平台接单。大家找装修公司一定要看资质！血泪教训，千万不要贪便宜。', summary: '曝光装修公司跑路，警示找装修公司要看资质', region: '未知地域', demand: '其他', intent_score: 15, intent_label: 'low', url: 'https://weibo.com', like_count: 567, comment_count: 210, share_count: 88, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(2) },
-  { id: 7, platform: 'xiaohongshu', title: '深圳小户型装修灵感｜60平两房爆改三房', author: '深漂小窝', content: '深圳60平小户型改造案例，两房改三房，全屋收纳设计，装修花了15万。设计师是深圳本地的，全程跟进很负责，推荐！', summary: '深圳60平小户型改造案例分享，含本地设计师推荐', region: '深圳', demand: '家装', intent_score: 68, intent_label: 'medium', url: 'https://www.xiaohongshu.com', like_count: 289, comment_count: 43, share_count: 17, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(3) },
-  { id: 8, platform: 'douyin', title: '北京办公室装修完工实拍｜500平科技公司', author: '工装设计师老王', content: '刚完工的北京500平科技公司办公室，现代科技风，工期40天。灯光和隔断是亮点，报价明细可以私信看。', summary: '北京500平办公室装修完工实拍', region: '北京', demand: '办公室装修', intent_score: 43, intent_label: 'medium', url: 'https://www.douyin.com', like_count: 156, comment_count: 28, share_count: 9, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(3) },
-  { id: 9, platform: 'zhihu', title: '装修公司报价单怎么看？有哪些坑要注意？', author: '装修过来人', content: '收到三份装修报价单，价格差了一倍多。全包半包怎么选？增项一般会加多少？坐标南京，求指点。', summary: '南京业主咨询装修报价单鉴别与避坑', region: '南京', demand: '家装', intent_score: 51, intent_label: 'medium', url: 'https://www.zhihu.com', like_count: 23, comment_count: 67, share_count: 5, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(4) },
-  { id: 10, platform: 'tieba', title: '成都装修公司前十名是哪几家？靠谱吗？', author: '贴吧老铁', content: '准备装修了，网上看到各种成都装修公司排名，也不知道真假。有没有成都本地的吧友说下哪家靠谱？半包还是全包？', summary: '成都业主求装修公司推荐，咨询半包全包选择', region: '成都', demand: '家装', intent_score: 66, intent_label: 'medium', url: 'https://tieba.baidu.com', like_count: 5, comment_count: 32, share_count: 1, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(5) },
-  { id: 11, platform: 'kuaishou', title: '老铁们，村里翻新房，墙面粉刷师傅有推荐吗？', author: '快手老张', content: '河南周口农村，家里翻新房，需要粉刷墙面和铺地砖，想找本地的师傅，价格实惠点。', summary: '河南周口翻新房找本地施工师傅', region: '周口', demand: '翻新', intent_score: 47, intent_label: 'medium', url: 'https://www.kuaishou.com', like_count: 2, comment_count: 6, share_count: 0, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(6) },
-  { id: 12, platform: 'kuaishou', title: '分享个装修小技巧，瓷砖美缝这样做省钱又好看', author: '装修达人小王', content: '美缝剂选色、施工步骤分享，自己动手省了2000块。装修干货持续更新。', summary: '装修美缝技巧分享', region: '未知地域', demand: '其他', intent_score: 22, intent_label: 'low', url: 'https://www.kuaishou.com', like_count: 89, comment_count: 12, share_count: 4, note: '', status: 'new', is_blacklisted: false, created_at: daysAgo(6) }
-]
+// ---------- 真实线索数据（导出自数据库） ----------
+const LEADS = realData.leads || []
 
-// ---------- 关键词 ----------
-const KEYWORDS = [
-  { id: 1, word: '装修', group: 1, group_name: '核心词', negative_words: '不需要,避雷,跑路,维权', hit_count: 132, created_at: daysAgo(10) },
-  { id: 2, word: '全屋定制', group: 1, group_name: '核心词', negative_words: '', hit_count: 87, created_at: daysAgo(10) },
-  { id: 3, word: '旧房改造', group: 1, group_name: '核心词', negative_words: '不需要', hit_count: 54, created_at: daysAgo(9) },
-  { id: 4, word: '办公室装修', group: 2, group_name: '工装', negative_words: '广告,招聘', hit_count: 41, created_at: daysAgo(8) },
-  { id: 5, word: '成都装修', group: 3, group_name: '地域词', negative_words: '', hit_count: 66, created_at: daysAgo(8) },
-  { id: 6, word: '上海装修', group: 3, group_name: '地域词', negative_words: '', hit_count: 38, created_at: daysAgo(7) },
-  { id: 7, word: '整装', group: 1, group_name: '核心词', negative_words: '', hit_count: 29, created_at: daysAgo(6) },
-  { id: 8, word: '家装', group: 1, group_name: '核心词', negative_words: '', hit_count: 95, created_at: daysAgo(5) }
-]
+// ---------- 关键词（真实） ----------
+const KEYWORDS = realData.keywords || []
 const GROUPS = [
   { id: 1, name: '核心词', count: 4 },
   { id: 2, name: '工装', count: 1 },
   { id: 3, name: '地域词', count: 2 }
 ]
 
-// ---------- 任务 ----------
-const TASKS = [
-  { id: 1, name: '装修获客任务', keywords: '装修,全屋定制', platforms: ['weibo', 'zhihu', 'tieba'], status: 'completed', progress: 100, message: '采集完成', created_at: daysAgo(1) },
-  { id: 2, name: '成都地域拓客', keywords: '成都装修,成都全屋定制', platforms: ['douyin', 'xiaohongshu'], status: 'running', progress: 62, message: '正在采集小红书...', created_at: daysAgo(0) },
-  { id: 3, name: '工装专项', keywords: '办公室装修', platforms: ['weibo', 'douyin'], status: 'paused', progress: 35, message: '已暂停', created_at: daysAgo(2) },
-  { id: 4, name: '全国翻新需求', keywords: '旧房改造,翻新', platforms: ['kuaishou', 'tieba'], status: 'failed', progress: 40, message: '平台风控拦截，等待重试', created_at: daysAgo(3) }
-]
+// ---------- 任务（真实） ----------
+const TASKS = realData.tasks || []
 
 // ---------- 操作日志 ----------
 const LOGS = [
@@ -81,18 +57,7 @@ const INDUSTRY_DICT = {
   '装饰': ['装饰', '软装', '硬装']
 }
 
-const HEATMAP = [
-  { lng: 104.07, lat: 30.67, count: 132, city: '成都' },
-  { lng: 121.47, lat: 31.23, count: 87, city: '上海' },
-  { lng: 113.26, lat: 23.13, count: 74, city: '广州' },
-  { lng: 114.06, lat: 22.54, count: 68, city: '深圳' },
-  { lng: 120.15, lat: 30.28, count: 58, city: '杭州' },
-  { lng: 116.41, lat: 39.91, count: 51, city: '北京' },
-  { lng: 118.80, lat: 32.06, count: 33, city: '南京' },
-  { lng: 113.13, lat: 29.37, count: 21, city: '岳阳' },
-  { lng: 114.70, lat: 33.63, count: 17, city: '周口' },
-  { lng: 103.83, lat: 36.06, count: 15, city: '兰州' }
-]
+const HEATMAP = (realData.region_distribution || []).map(r => ({ name: r.name, value: r.value }))
 
 const DISCLAIMER = `本平台提供的客户大数据采集与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
 使用本平台前，请您仔细阅读并理解以下条款：
