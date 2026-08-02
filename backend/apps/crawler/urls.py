@@ -8,12 +8,20 @@ from apps.crawler.views.official_api_views import (
     OfficialCredentialsView,
 )
 from apps.crawler.views import CrawlerConfigView, ModeSwitchView, PlatformStatusView
+from apps.crawler.views.realdata_views import (
+    MediaCrawlerImportView,
+    RealLeadsView,
+)
 from apps.crawler.views.mediacrawler_views import (
     MediaCrawlerTaskView,
     MediaCrawlerTaskDetailView,
     MediaCrawlerTaskResultView,
     MediaCrawlerPlatformsView,
     MediaCrawlerQuickStartView
+)
+from apps.crawler.views.industry_batch_views import (
+    IndustryBatchView,
+    IndustryBatchOptionsView,
 )
 
 urlpatterns = [
@@ -33,4 +41,11 @@ urlpatterns = [
     path("mediacrawler/tasks/<str:task_id>/results", MediaCrawlerTaskResultView.as_view(), name="mc_task_results"),
     path("mediacrawler/platforms", MediaCrawlerPlatformsView.as_view(), name="mc_platforms"),
     path("mediacrawler/quickstart", MediaCrawlerQuickStartView.as_view(), name="mc_quickstart"),
+    # 真实数据导入
+    path("mediacrawler/import", MediaCrawlerImportView.as_view(), name="mc_import"),
+    path("realleads", RealLeadsView.as_view(), name="real_leads"),
+    # 行业关键词批量自动采集
+    path("industry/batch", IndustryBatchView.as_view(), name="industry_batch"),
+    path("industry/options", IndustryBatchOptionsView.as_view(), name="industry_batch_options"),
+
 ]
