@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from apps.crawler.services.intent_scoring import IntentScoring
+from apps.crawler.services.content_filter import classify_content
 
 MEDIACRAWLER_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "MediaCrawler"
 
@@ -135,6 +136,7 @@ def import_jsonl(user, platform="weibo", keyword="", task_id=""):
 
     imported = 0
     skipped = 0
+    filtered_junk = 0
     for f in files:
         with open(f, "r", encoding="utf-8") as fh:
             for line in fh:
@@ -217,6 +219,26 @@ def import_jsonl(user, platform="weibo", keyword="", task_id=""):
                 if region:
                     tags.append(region)
 
+                # 内容质量过滤：垃圾内容（小说/网文/无关）跳过，低价值打标记
+                action, reason = classify_content(title, content)
+                if action == "junk":
+                    skipped += 1
+                    continue
+                if action == "low_value":
+                    tags.append(f"低价值:{reason}")
+                    if intent_label in ("high", "medium"):
+                        intent_label = "low"
+
+                # 内容质量过滤：小说/无关内容跳过，低价值打标记
+                q_action, q_reason = classify_content(title, content)
+                if q_action == "junk":
+                    filtered_junk += 1
+                    continue
+                if q_action == "low_value":
+                    tags.append(f"低价值:{q_reason}")
+                    if intent_label in ("high", "medium"):
+                        intent_label = "low"
+
                 Lead.objects.create(
                     user=user,
                     task_id=task_id,
@@ -245,6 +267,7 @@ def import_jsonl(user, platform="weibo", keyword="", task_id=""):
         "platform": sys_platform,
         "imported": imported,
         "skipped_dup": skipped,
+        "filtered_junk": filtered_junk,
         "files": [f.name for f in files],
     }
 
