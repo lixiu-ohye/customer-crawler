@@ -157,43 +157,63 @@ def build_queue():
     return queue
 
 
+def get_platforms():
+    """读取平台列表（环境变量 AUTO_CRAWL_PLATFORMS，逗号分隔；默认 6 平台）"""
+    default = ["wb", "dy", "xhs", "ks", "zhihu", "tieba"]
+    env = os.environ.get("AUTO_CRAWL_PLATFORMS", "")
+    if env:
+        return [p.strip() for p in env.split(",") if p.strip()]
+    return default
+
+
 def auto_crawl_loop():
-    """主循环：行业词库 → 关键词 → 采集 → 导入"""
+    """主循环：多平台轮转 — 每轮选一个平台跑完词库，下一轮换平台
+    每个平台独立 cursor（state 里 cursor_<platform>），平台间互不影响
+    """
     state = load_state()
     queue = build_queue()
-    logger.info(f"[auto_crawl] queue size: {len(queue)}, cursor: {state['cursor']}")
+    platforms = get_platforms()
     if not queue:
         return
 
-    cursor = state.get("cursor", 0)
+    # 平台轮转：上一轮跑的平台 +1
+    cur_idx = state.get("platform_idx", 0) % len(platforms)
+    platform = platforms[cur_idx]
+    platform_name = PLATFORM_NAME_MAP.get(platform, platform)
+    state["platform_idx"] = (cur_idx + 1) % len(platforms)
+    save_state(state)
+    logger.info(f"[auto_crawl] this round platform={platform} ({platform_name}), platforms={platforms}")
+
+    cursor_key = "cursor_" + platform
+    cursor = state.get(cursor_key, 0)
     if cursor >= len(queue):
-        cursor = 0  # 一轮完成，从头再来（持续增量采集）
+        cursor = 0  # 该平台一轮完成，从头再来
 
     for i in range(cursor, len(queue)):
         item = queue[i]
-        state["cursor"] = i
+        state[cursor_key] = i
         state["last_run"] = datetime.now().isoformat()
         save_state(state)
 
-        logger.info(f"[auto_crawl] [{i + 1}/{len(queue)}] industry={item['industry']} keyword={item['keyword']}")
+        logger.info(f"[auto_crawl] [{i + 1}/{len(queue)}] platform={platform} industry={item['industry']} keyword={item['keyword']}")
         try:
-            run_keyword(item["keyword"])
+            run_keyword(item["keyword"], platform=platform)
             # MediaCrawler 按日期追加同名 jsonl，无法用“新增文件”判断；
             # 直接导入该平台全量 jsonl（import_jsonl 内部按 item_id 去重 + upsert 补标签，幂等安全）
-            result = import_jsonl_to_leads(None, platform="weibo")
+            result = import_jsonl_to_leads(None, platform=platform_name)
             n = result.get("imported", 0)
             state["total_imported"] += n
             logger.info(f"[auto_crawl] import result: imported={n} skipped={result.get('skipped_dup')} (total={state['total_imported']})")
             save_state(state)
         except Exception as e:
-            logger.exception(f"keyword failed: {item['keyword']}: {e}")
+            logger.exception(f"keyword failed: {platform}/{item['keyword']}: {e}")
 
         # 串行间隔 + 避免密集请求
         time.sleep(CRAWL_INTERVAL)
 
-    state["cursor"] = 0
+    state[cursor_key] = 0
     save_state(state)
-    logger.info("[auto_crawl] round done, reset cursor. Will continue next round.")
+    logger.info(f"[auto_crawl] round done for {platform}, reset cursor. Next round: {platforms[state.get('platform_idx', 0) % len(platforms)]}")
 
 
 if __name__ == "__main__":
