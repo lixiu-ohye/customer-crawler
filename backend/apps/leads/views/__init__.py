@@ -22,11 +22,15 @@ class LeadListView(APIView):
         paginator = LeadPagination()
         page = paginator.paginate_queryset(qs, request)
         data = [serialize_lead(lead) for lead in page]
+        options = LeadService.filter_options(request.user)
         return Response({
             "results": data,
             "total": qs.count(),
             "page": paginator.page.number if paginator.page else 1,
             "pages": paginator.page.paginator.num_pages if paginator.page else 0,
+            "industries": options["industries"],
+            "scenes": options["scenes"],
+            "regions": options["regions"],
         })
 
 
