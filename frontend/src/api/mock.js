@@ -605,17 +605,46 @@ function route(config) {
   }
 
 
-  // 行业地域导航 · 客户线索（drill-down）
+  // 行业地域导航 · 客户线索（drill-down）—— 真实数据（LEADS）映射，不再用 NAV_LEADS 演示数据
+  const NAV_INDUSTRY_TAGS = ['装修家居', '本地生活家政服务', '汽车服务行业', '美业医美', '教育培训', '企业B端财税商务服务', '房产同城服务', '婚庆摄影', '口腔/健康理疗', '工程建材行业', '宠物行业', '互联网服务商', '法律服务', '法律行业', '金融理财', '本地生活', '电商零售']
+  const NAV_FIELD_MAP = { '装修家居': ['全屋定制', '旧房翻新', '新房装修', '局部改造'], '汽车服务行业': ['汽车维修', '汽车保养', '二手车', '贴膜'], '本地生活家政服务': ['家政保洁', '搬家服务', '月嫂保姆'], '美业医美': ['皮肤管理', '祛斑祛痘', '植发'], '教育培训': ['学历提升', '技能培训', '考公考研'], '企业B端财税商务服务': ['代理记账', '公司注册', '税务筹划'], '法律服务': ['法律咨询', '合同纠纷', '劳动仲裁'], '金融理财': ['贷款', '理财', '保险'] }
   if (url === '/misc/industry-leads' && method === 'get') {
-    let list = NAV_LEADS.slice()
-    if (params.industry) list = list.filter(x => params.industry.includes(x.industry) || x.industry.includes(params.industry))
-    if (params.region) list = list.filter(x => params.region.includes(x.region) || x.region.includes(params.region))
-    if (params.field) list = list.filter(x => params.field.includes(x.field) || x.field.includes(params.field))
-    if (params.scenario) list = list.filter(x => params.scenario.includes(x.scenario) || x.scenario.includes(params.scenario))
+    // 真实数据 -> 导航线索结构（合规：不展示手机号/联系人真实信息，contact 用脱敏作者）
+    const realToNav = l => {
+      const tags = l.tags || []
+      const ind = tags.find(t => NAV_INDUSTRY_TAGS.includes(t)) || ''
+      const demand = l.demand || ''
+      const field = (NAV_FIELD_MAP[ind] || []).find(f => (l.title || '').includes(f) || (l.content || '').includes(f)) || (NAV_FIELD_MAP[ind] || [])[0] || demand
+      const scenario = demand || '综合咨询'
+      return {
+        id: l.id,
+        industry: ind,
+        region: l.region || '',
+        field: field,
+        scenario: scenario,
+        need: (l.title || '').slice(0, 60) || '未命名线索',
+        contact: l.author ? l.author.slice(0, 6) : '',
+        phone: '',
+        intent: l.intent_score || 0,
+        status: '待跟进',
+        created_at: (l.publish_time || l.created_at || '').slice(0, 19).replace('T', ' '),
+        tags: tags.filter(t => t !== '真实数据' && !NAV_INDUSTRY_TAGS.includes(t) && t !== ind && t !== scenario && t !== l.region).slice(0, 5),
+        _real: true,
+        url: l.url || ''
+      }
+    }
+    let list = LEADS.map(realToNav).filter(x => x.industry)  // 仅保留有行业标签的
+    if (params.industry) list = list.filter(x => x.industry && (params.industry.includes(x.industry) || x.industry.includes(params.industry)))
+    if (params.region) list = list.filter(x => x.region && (params.region.includes(x.region) || x.region.includes(params.region)))
+    if (params.field) list = list.filter(x => x.field && (params.field.includes(x.field) || x.field.includes(params.field)))
+    if (params.scenario) list = list.filter(x => x.scenario && (params.scenario.includes(x.scenario) || x.scenario.includes(params.scenario)))
     if (params.intent) {
       const min = Number(params.intent)
-      list = list.filter(x => x.intent >= min)
+      // 真实数据意向分普遍 40-70，80+ 几乎无命中：按相对档位映射
+      const floor = min >= 80 ? 60 : min >= 70 ? 55 : min >= 60 ? 50 : min
+      list = list.filter(x => x.intent >= floor)
     }
+    list.sort((a, b) => b.intent - a.intent)  // 高意向优先
     return json({ results: list, total: list.length })
   }
   if (url === '/misc/industry-regions') {
