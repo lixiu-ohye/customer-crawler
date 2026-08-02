@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """MediaCrawler 真实数据导入服务
 读取 MediaCrawler 采集的 jsonl 文件 → 映射为 Lead 线索入库（去重 + 意向评分 + 行业/地域/领域/场景标签）
+支持多平台：weibo/dy(douyin)/xhs(xiaohongshu)/ks(kuaishou)/zhihu/tieba
 """
 import json
 from datetime import datetime
@@ -23,7 +24,7 @@ PLATFORM_MAP = {
 
 PLATFORM_NAMES = {
     "weibo": "微博", "douyin": "抖音", "xiaohongshu": "小红书",
-    "kuaishou": "快手", "zhihu": "知乎", "tieba": "贴吧",
+    "kuaishou": "快手", "zhihu": "知乎", "tieba": "贴吧", "bilibili": "哔哩哔哩",
 }
 
 # 地域识别词表（省市 + 常见城市，命中即填 region）
@@ -96,12 +97,35 @@ def detect_scene(text):
     return "", ""
 
 
-def import_weibo_jsonl(user, keyword="", task_id=""):
-    """导入微博 jsonl → Lead 入库（带行业/地域/场景标签），返回统计"""
+def _int_or_zero(v):
+    try:
+        return int(v)
+    except Exception:
+        return 0
+
+
+def import_jsonl(user, platform="weibo", keyword="", task_id=""):
+    """导入指定平台 jsonl → Lead 入库（带行业/地域/场景标签），返回统计。
+    platform: 系统平台码（weibo/douyin/xiaohongshu/kuaishou/zhihu/tieba）或 MediaCrawler 目录名（wb/dy/xhs/ks/zhihu/tieba）
+    """
     from apps.leads.models import Lead
 
     scoring = IntentScoring()
-    base = MEDIACRAWLER_DIR / "data" / "jsonl" / "weibo" / "jsonl"
+
+    # 目录名解析：系统码 → 目录名
+    dir_map = {
+        "weibo": "weibo", "douyin": "douyin", "xiaohongshu": "xhs",
+        "kuaishou": "ks", "zhihu": "zhihu", "tieba": "tieba", "bilibili": "bili",
+    }
+    dir_name = dir_map.get(platform, platform)
+    sys_platform = PLATFORM_MAP.get(dir_name, platform)
+    platform_label = PLATFORM_NAMES.get(sys_platform, platform)
+
+    base = MEDIACRAWLER_DIR / "data" / dir_name / "jsonl"
+    # 兼容旧路径 data/jsonl/{dir}/jsonl（历史版本输出）
+    legacy_base = MEDIACRAWLER_DIR / "data" / "jsonl" / dir_name / "jsonl"
+    if not base.exists() and legacy_base.exists():
+        base = legacy_base
     if not base.exists():
         return {"success": False, "error": f"jsonl dir not found: {base}"}
 
@@ -121,9 +145,11 @@ def import_weibo_jsonl(user, keyword="", task_id=""):
                     raw = json.loads(line)
                 except Exception:
                     continue
-                note_id = str(raw.get("note_id") or "")
+                note_id = str(raw.get("note_id") or raw.get("id") or raw.get("aweme_id") or raw.get("video_id") or raw.get("item_id") or "")
+                if not note_id:
+                    continue
                 # 去重：按 user + platform + item_id；已存在则补标签（upsert 更新 region/demand/tags）
-                exist = Lead.objects.filter(user=user, platform="weibo", item_id=note_id).first()
+                exist = Lead.objects.filter(user=user, platform=sys_platform, item_id=note_id).first()
                 if exist:
                     # 已存在：只补行业/地域/场景标签（不覆盖原内容）
                     search_text = (exist.content or "")[:200] + (exist.title or "")
@@ -152,23 +178,14 @@ def import_weibo_jsonl(user, keyword="", task_id=""):
                     skipped += 1
                     continue
 
-                content = raw.get("content") or ""
+                content = raw.get("content") or raw.get("desc") or raw.get("title") or ""
                 title = content[:80] if content else (raw.get("title") or "")
-                like_count = raw.get("liked_count") or 0
-                comment_count = raw.get("comments_count") or 0
-                share_count = raw.get("shared_count") or 0
-                try:
-                    like_count = int(like_count)
-                except Exception:
-                    like_count = 0
-                try:
-                    comment_count = int(comment_count)
-                except Exception:
-                    comment_count = 0
-                try:
-                    share_count = int(share_count)
-                except Exception:
-                    share_count = 0
+                like_count = _int_or_zero(raw.get("liked_count") or raw.get("like_count"))
+                comment_count = _int_or_zero(raw.get("comments_count") or raw.get("comment_count"))
+                share_count = _int_or_zero(raw.get("shared_count") or raw.get("share_count"))
+                author = raw.get("nickname") or raw.get("author") or raw.get("user_name") or ""
+                author_id = raw.get("creator_hash") or raw.get("author_id") or ""
+                note_url = raw.get("note_url") or raw.get("url") or ""
 
                 item = {
                     "content": content,
@@ -192,7 +209,7 @@ def import_weibo_jsonl(user, keyword="", task_id=""):
                 search_text = content[:200] + title
                 region = detect_region(search_text)
                 scene, industry = detect_scene(search_text)
-                tags = [PLATFORM_NAMES.get("weibo", "微博"), "真实数据"]
+                tags = [platform_label, "真实数据"]
                 if industry:
                     tags.append(industry)
                 if scene:
@@ -203,17 +220,17 @@ def import_weibo_jsonl(user, keyword="", task_id=""):
                 Lead.objects.create(
                     user=user,
                     task_id=task_id,
-                    platform="weibo",
+                    platform=sys_platform,
                     item_id=note_id,
                     title=title,
                     content=content,
-                    author=raw.get("nickname") or "",
-                    author_id=raw.get("creator_hash") or "",
-                    url=raw.get("note_url") or f"https://m.weibo.cn/detail/{note_id}",
+                    author=author,
+                    author_id=author_id,
+                    url=note_url or raw.get("aweme_url") or raw.get("video_url") or f"https://m.weibo.cn/detail/{note_id}",
                     like_count=like_count,
                     comment_count=comment_count,
                     share_count=share_count,
-                    publish_time=_parse_time(raw.get("create_date_time") or raw.get("create_time")),
+                    publish_time=_parse_time(raw.get("create_date_time") or raw.get("create_time") or raw.get("publish_time")),
                     intent_score=score,
                     intent_label=intent_label,
                     score_breakdown=breakdown,
@@ -225,7 +242,13 @@ def import_weibo_jsonl(user, keyword="", task_id=""):
 
     return {
         "success": True,
+        "platform": sys_platform,
         "imported": imported,
         "skipped_dup": skipped,
         "files": [f.name for f in files],
     }
+
+
+def import_weibo_jsonl(user, keyword="", task_id=""):
+    """兼容旧函数名：导入微博 jsonl"""
+    return import_jsonl(user, platform="weibo", keyword=keyword, task_id=task_id)
