@@ -59,6 +59,16 @@ const LOGS = [
 const INDUSTRIES = ['装修', '全屋定制', '家装', '旧房改造', '办公室装修', '翻新', '整装', '装饰']
 // 官方 API 凭证热配置 (演示: 内存态)
 const MOCK_CREDENTIALS = {}
+MOCK_BATCHES = []
+MOCK_INDUSTRIES = [
+  { name: '法律行业', word_count: 6 }, { name: '装修家居', word_count: 5 },
+  { name: '企业B端财税商务服务', word_count: 4 }, { name: '教育培训', word_count: 4 },
+  { name: '汽车服务行业', word_count: 4 }, { name: '本地生活家政服务', word_count: 4 },
+  { name: '美业医美', word_count: 4 }, { name: '房产同城服务', word_count: 4 },
+  { name: '婚庆摄影', word_count: 4 }, { name: '口腔/健康理疗', word_count: 4 },
+  { name: '工程建材行业', word_count: 4 }, { name: '宠物行业', word_count: 4 },
+  { name: '互联网服务商（代运营/软件开发）', word_count: 4 },
+]
 const CITIES = ['北京', '上海', '广州', '深圳', '成都', '杭州', '南京', '武汉', '长沙', '重庆', '西安', '郑州', '岳阳', '周口']
 const INDUSTRY_DICT = {
   '装修': ['装修', '全屋定制', '整装', '家装', '旧房改造', '翻新'],
@@ -835,6 +845,65 @@ function route(config) {
       }
       return json({ detail: '平台无效' }, 400)
     }
+
+  // ---------- 行业关键词批量自动采集 ----------
+  if (url === '/crawler/industry/batch' && method === 'post') {
+    const ind = (body.industry || '').trim()
+    const plats = Array.isArray(body.platforms) ? body.platforms : ['weibo']
+    const mk = Math.max(1, Math.min(parseInt(body.max_keywords || 8, 10) || 8, 15))
+    const industryPool = {
+      '法律行业': ['婚姻家庭', '刑事辩护', '合同纠纷', '劳动仲裁', '交通事故', '债务纠纷'],
+      '装修家居': ['旧房翻新', '办公室装修', '全屋定制', '水电改造', '墙面翻新'],
+      '企业B端财税商务服务': ['税务筹划', '代理记账', '工商注册', '资质代办'],
+      '教育培训': ['少儿编程', 'K12辅导', '职业培训', '成人学历'],
+      '汽车服务行业': ['汽车保养', '洗车美容', '车险续保', '二手车评估'],
+      '本地生活家政服务': ['月嫂育婴', '保洁清洗', '家电维修', '搬家服务'],
+      '美业医美': ['皮肤管理', '医美整形', '美甲美睫', '纹绣'],
+      '房产同城服务': ['二手房买卖', '新房团购', '商铺租赁', '房屋托管'],
+      '婚庆摄影': ['婚礼策划', '婚纱摄影', '跟妆服务', '婚宴预订'],
+      '口腔/健康理疗': ['种植牙', '牙齿矫正', '推拿理疗', '体检套餐'],
+      '工程建材行业': ['防水工程', '瓷砖批发', '门窗定制', '钢结构'],
+      '宠物行业': ['宠物美容', '宠物寄养', '宠物医院', '宠物用品'],
+      '互联网服务商（代运营/软件开发）': ['电商代运营', '小程序开发', '网站建设', '短视频代运营'],
+    }
+    const pool = industryPool[ind] || ['关键词1', '关键词2', '关键词3']
+    const keywords = pool.slice(0, mk)
+    const batchId = 'MOCK' + Date.now().toString().slice(-8)
+    MOCK_BATCHES.unshift({
+      batch_id: batchId, industry: ind, platforms: plats, status: 'running',
+      created_at: now(), finished_at: null, total_keywords: keywords.length,
+      completed_keywords: 0, imported_count: 0,
+      sub_tasks: keywords.map(k => ({ keyword: k, platform: plats[0], task_id: null, status: 'pending', result_count: 0, import_result: 0, error: null })),
+    })
+    // 模拟进度推进
+    const b = MOCK_BATCHES[0]
+    let done = 0
+    const timer = setInterval(() => {
+      if (done >= b.sub_tasks.length) { clearInterval(timer); b.status = 'completed'; b.finished_at = now(); return }
+      b.sub_tasks[done].status = 'completed'
+      b.sub_tasks[done].result_count = 5 + done * 3
+      b.sub_tasks[done].import_result = 3 + done * 2
+      b.completed_keywords = ++done
+      b.imported_count += b.sub_tasks[done - 1].import_result
+    }, 1500)
+    return json({ success: true, batch_id: batchId, industry: ind, platforms: plats, keywords, sub_task_count: keywords.length * plats.length, message: `已启动行业[${ind}]批量采集，${keywords.length} 个关键词 × ${plats.length} 平台` })
+  }
+  if (url === '/crawler/industry/batch' && method === 'get') {
+    const id = params.id || ''
+    if (id) {
+      const b = MOCK_BATCHES.find(x => x.batch_id === id)
+      if (!b) return json({ success: false, error: 'batch not found' }, 404)
+      return json({ success: true, batch: b })
+    }
+    return json({ success: true, batches: MOCK_BATCHES })
+  }
+  if (url === '/crawler/industry/options') {
+    return json({ results: {
+      industries: MOCK_INDUSTRIES,
+      platforms: [{ code: 'weibo', name: '微博' }, { code: 'douyin', name: '抖音' }, { code: 'xiaohongshu', name: '小红书' }, { code: 'kuaishou', name: '快手' }, { code: 'zhihu', name: '知乎' }, { code: 'tieba', name: '贴吧' }],
+    } })
+  }
+
   }
 
 
