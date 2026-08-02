@@ -59,8 +59,8 @@ const LOGS = [
 const INDUSTRIES = ['装修', '全屋定制', '家装', '旧房改造', '办公室装修', '翻新', '整装', '装饰']
 // 官方 API 凭证热配置 (演示: 内存态)
 const MOCK_CREDENTIALS = {}
-MOCK_BATCHES = []
-MOCK_INDUSTRIES = [
+const MOCK_BATCHES = []
+const MOCK_INDUSTRIES = [
   { name: '法律行业', word_count: 6 }, { name: '装修家居', word_count: 5 },
   { name: '企业B端财税商务服务', word_count: 4 }, { name: '教育培训', word_count: 4 },
   { name: '汽车服务行业', word_count: 4 }, { name: '本地生活家政服务', word_count: 4 },
