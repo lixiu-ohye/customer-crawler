@@ -6,6 +6,20 @@ from django.db.models import Q
 
 from apps.leads.models import Lead
 
+# 行业→场景映射（与 importer 的 SCENE_INDUSTRY 反向）
+INDUSTRY_SCENES = {
+    "法律服务": ["法律咨询"],
+    "装修家居": ["装修家居"],
+    "本地生活家政服务": ["家政服务"],
+    "教育培训": ["教育培训"],
+    "美业医美": ["医美健康"],
+    "汽车服务行业": ["汽车服务"],
+    "企业B端财税商务服务": ["企业服务"],
+    "本地生活": ["本地生活"],
+    "电商零售": ["电商零售"],
+    "金融理财": ["金融理财"],
+}
+
 
 def serialize_lead(lead):
     return {
@@ -52,6 +66,15 @@ class LeadService:
             qs = qs.filter(region__icontains=params["region"])
         if params.get("demand"):
             qs = qs.filter(demand=params["demand"])
+        if params.get("scene"):
+            qs = qs.filter(demand=params["scene"])
+        if params.get("industry"):
+            # 行业 → 对应场景集合（tags 含行业名 或 demand 命中场景）
+            scenes = INDUSTRY_SCENES.get(params["industry"], [])
+            ind = params["industry"]
+            qs = Lead.objects.filter(
+                Q(demand__in=scenes) | Q(id__in=[l.id for l in qs if ind in (l.tags or [])])
+            )
         if params.get("min_score") is not None:
             qs = qs.filter(intent_score__gte=int(params["min_score"]))
         if params.get("search"):
@@ -64,7 +87,21 @@ class LeadService:
             qs = qs.filter(is_blacklisted=False)
         if params.get("task_id"):
             qs = qs.filter(task_id=params["task_id"])
+        if params.get("real") == "1":
+            # SQLite 不支持 JSON contains，用 Python 过滤
+            ids = [l.id for l in qs if "真实数据" in (l.tags or [])]
+            qs = Lead.objects.filter(id__in=ids)
         return qs
+
+    @staticmethod
+    def filter_options(user):
+        """返回可用筛选项：行业 / 场景 / 地域 列表"""
+        leads = Lead.objects.filter(user=user, is_blacklisted=False)
+        industries = sorted({t for lead in leads for t in (lead.tags or [])
+                             if t in INDUSTRY_SCENES})
+        scenes = sorted({lead.demand for lead in leads if lead.demand})
+        regions = sorted({lead.region for lead in leads if lead.region})
+        return {"industries": industries, "scenes": scenes, "regions": regions}
 
     @staticmethod
     def export_csv(user, params):
@@ -106,42 +143,15 @@ class LeadService:
                 lead.publish_time.strftime("%Y-%m-%d %H:%M") if lead.publish_time else "",
                 lead.region, lead.demand, lead.get_intent_label_display(), lead.intent_score, lead.note,
             ])
-        buffer = io.BytesIO()
-        wb.save(buffer)
-        return buffer.getvalue()
+        return _xlsx_bytes(wb)
 
     @staticmethod
-    def create_from_items(user, items, task_id=""):
-        """批量入库：自动去重 + 标签映射"""
-        created = 0
-        intent_map = {"high": "high", "medium": "medium", "low": "low", "none": "none"}
-        for item in items:
-            if not item.get("content"):
-                continue
-            if Lead.objects.filter(user=user, item_id=item.get("item_id", ""), platform=item.get("platform")).exists():
-                continue
-            location = item.get("location") or []
-            tags = item.get("tags") or {}
-            Lead.objects.create(
-                user=user,
-                task_id=task_id,
-                platform=item.get("platform", ""),
-                item_id=item.get("item_id", ""),
-                title=item.get("title", "")[:200],
-                content=item.get("content", ""),
-                author=item.get("author", ""),
-                author_id=item.get("author_id", ""),
-                url=item.get("url", ""),
-                like_count=item.get("like_count", 0),
-                comment_count=item.get("comment_count", 0),
-                share_count=item.get("share_count", 0),
-                region=tags.get("region", ""),
-                demand=tags.get("demand", ""),
-                intent_label=intent_map.get(tags.get("intent", ""), "none"),
-                intent_score=item.get("intent_score", 0),
-                tags=tags,
-                lng=location[0] if len(location) > 0 else None,
-                lat=location[1] if len(location) > 1 else None,
-            )
-            created += 1
-        return created
+    def export_xlsx_legacy(user, params):
+        return LeadService.export_xlsx(user, params)
+
+
+def _xlsx_bytes(wb):
+    import io as _io
+    buf = _io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
