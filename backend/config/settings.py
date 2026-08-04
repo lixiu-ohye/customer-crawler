@@ -81,7 +81,8 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            # 数据库迁到 D 盘（C 盘空间不足 0.5GB）；D:\customer-crawler-data\db.sqlite3
+            "NAME": os.getenv("DB_PATH", r"D:\customer-crawler-data\db.sqlite3"),
         }
     }
 
