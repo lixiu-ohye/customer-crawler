@@ -26,7 +26,20 @@
     </el-aside>
     <el-container>
       <el-header class="header">
-        <div class="header-title">{{ $route.meta.title || '' }}</div>
+        <div class="header-left">
+          <div class="header-title">{{ $route.meta.title || '' }}</div>
+          <el-autocomplete
+            v-model="globalKeyword"
+            :fetch-suggestions="globalSuggest"
+            placeholder="全局搜索：行业 / 地域 / 关键词"
+            clearable
+            style="width: 280px; margin-left: 16px"
+            @select="goGlobalSearch"
+            @keyup.enter="goGlobalSearch"
+          >
+            <template #prefix><el-icon><Search /></el-icon></template>
+          </el-autocomplete>
+        </div>
         <div class="flex">
           <el-tag v-if="auth.isAdmin" type="danger" size="small" effect="dark" class="mr8">管理员</el-tag>
           <el-dropdown @command="handleCommand">
@@ -60,13 +73,41 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { Cpu, DataAnalysis, Connection, Aim } from '@element-plus/icons-vue'
+import { Cpu, DataAnalysis, Connection, Aim, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import FloatingBubble from '../components/FloatingBubble.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const globalKeyword = ref('')
+
+// 全局搜索联想：行业 + 地域
+const GLOBAL_SUGGESTIONS = [
+  { value: '装修家居' }, { value: '法律行业' }, { value: '美业医美' },
+  { value: '本地生活家政服务' }, { value: '汽车服务行业' }, { value: '教育培训' },
+  { value: '宠物行业' }, { value: '房产同城服务' }, { value: '婚庆摄影' },
+  { value: '口腔健康理疗' }, { value: '工程建材行业' }, { value: '互联网服务商' },
+  { value: '企业B端财税商务服务' },
+  { value: '北京' }, { value: '上海' }, { value: '广州' }, { value: '深圳' },
+  { value: '杭州' }, { value: '成都' }, { value: '武汉' }, { value: '南京' },
+  { value: '苏州' }, { value: '西安' }, { value: '郑州' }, { value: '长沙' },
+  { value: '重庆' }, { value: '天津' }, { value: '青岛' }, { value: '宁波' },
+]
+
+const globalSuggest = (query, cb) => {
+  const q = (query || '').trim().toLowerCase()
+  if (!q) return cb(GLOBAL_SUGGESTIONS.slice(0, 8))
+  const list = GLOBAL_SUGGESTIONS.filter(s => s.value.toLowerCase().includes(q)).slice(0, 10)
+  cb(list)
+}
+
+// 全局搜索跳转：去真实数据页并带参数
+const goGlobalSearch = () => {
+  const q = globalKeyword.value.trim()
+  if (!q) return
+  router.push({ path: '/realleads', query: { kw: q } })
+}
 
 // 开发者特权：admin/admin123456 账号永久免费 + 开发者选项
 const isDeveloper = computed(() => {
@@ -93,6 +134,7 @@ const handleCommand = async command => {
 .logo { height: 60px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; font-weight: 600; font-size: 15px; }
 .aside :deep(.el-menu) { border-right: none; }
 .header { background: #fff; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,21,41,.08); z-index: 1; }
+.header-left { display: flex; align-items: center; }
 .header-title { font-size: 16px; font-weight: 600; color: #303133; }
 .user-name { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #606266; }
 .avatar { background: #409EFF; color: #fff; font-size: 14px; }
