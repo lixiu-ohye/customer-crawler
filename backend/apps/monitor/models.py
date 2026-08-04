@@ -11,6 +11,8 @@ class MonitorTarget(models.Model):
     )
     PLATFORM_CHOICES = (
         ("douyin", "抖音"), ("shipinhao", "视频号"), ("kuaishou", "快手"),
+        ("xiaohongshu", "小红书"), ("weibo", "微博"), ("zhihu", "知乎"),
+        ("tieba", "贴吧"), ("bilibili", "哔哩哔哩"),
     )
     STATUS_CHOICES = (
         ("active", "监控中"), ("paused", "已暂停"), ("stopped", "已停止"),
