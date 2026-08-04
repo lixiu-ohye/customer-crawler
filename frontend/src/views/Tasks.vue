@@ -31,6 +31,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="message" label="信息" min-width="140" show-overflow-tooltip />
+        <el-table-column label="定时更新" width="110">
+          <template #default="{ row }">
+            <el-tag v-if="row.schedule_type && scheduleMap[row.schedule_type]" :type="scheduleType[row.schedule_type] || 'info'" size="small">{{ scheduleMap[row.schedule_type] }}</el-tag>
+            <span v-else style="color: #c0c4cc">无</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="160" />
         <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
@@ -61,11 +67,13 @@
         <el-form-item label="页数">
           <el-input-number v-model="createForm.pages" :min="1" :max="20" />
         </el-form-item>
-        <el-form-item label="定时">
+        <el-form-item label="定时更新">
           <el-select v-model="createForm.schedule_type" clearable placeholder="不启用定时" style="width: 100%">
-            <el-option label="每天" value="daily" />
-            <el-option label="每周" value="weekly" />
+            <el-option label="每6小时自动更新" value="6h" />
+            <el-option label="每12小时自动更新" value="12h" />
+            <el-option label="每24小时自动更新" value="24h" />
           </el-select>
+          <div style="color: #909399; font-size: 12px; line-height: 1.5; margin-top: 4px">任务级定时：仅该任务按设定间隔自动重跑，其余任务不受影响（替代旧的全局 6 小时轮询）</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -88,8 +96,9 @@ const statusFilter = ref('')
 const createVisible = ref(false)
 const creating = ref(false)
 const createForm = reactive({ name: '', keywords: '', platforms: [], pages: 1, schedule_type: '' })
-
 const platformMap = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
+const scheduleMap = { '6h': '每6小时', '12h': '每12小时', '24h': '每24小时' }
+const scheduleType = { '6h': 'warning', '12h': 'primary', '24h': 'success' }
 const statusMap = { pending: '待启动', running: '运行中', paused: '已暂停', completed: '已完成', failed: '失败', stopped: '已终止' }
 const statusType = { pending: 'info', running: 'primary', paused: 'warning', completed: 'success', failed: 'danger', stopped: 'info' }
 
