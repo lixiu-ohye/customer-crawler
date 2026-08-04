@@ -32,12 +32,15 @@
           </div>
           <el-descriptions :column="3" border>
             <el-descriptions-item label="套餐">
-              <el-tag type="success">{{ plan.plan_type === 'free' ? '免费版' : plan.plan_type === 'pro' ? '专业版' : '旗舰版' }}</el-tag>
+              <el-tag type="success">{{ planName }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="线索配额">{{ plan.quota_used }}/{{ plan.quota_total }}</el-descriptions-item>
             <el-descriptions-item label="到期时间">{{ plan.expire_at || '永久' }}</el-descriptions-item>
             <el-descriptions-item label="任务并发">{{ plan.concurrent_tasks }}</el-descriptions-item>
             <el-descriptions-item label="每日采集上限">{{ plan.daily_crawl_limit }}</el-descriptions-item>
+            <el-descriptions-item label="评论采集">{{ plan.allow_comments ? '已开通' : '未开通' }}</el-descriptions-item>
+            <el-descriptions-item label="子账号">{{ plan.sub_accounts || 0 }} 个</el-descriptions-item>
+            <el-descriptions-item label="CRM">{{ plan.crm || '未开通' }}</el-descriptions-item>
             <el-descriptions-item label="API 模式">{{ plan.api_access ? '已开通' : '未开通' }}</el-descriptions-item>
           </el-descriptions>
 
@@ -57,17 +60,32 @@
       </el-col>
     </el-row>
 
-    <el-dialog v-model="upgradeVisible" title="升级套餐" width="560px">
+    <el-dialog v-model="upgradeVisible" title="升级套餐" width="640px">
       <el-table :data="plans" highlight-current-row @current-change="r => selectedPlan = r">
-        <el-table-column prop="name" label="套餐" width="100" />
-        <el-table-column prop="quota" label="线索配额" width="120" />
-        <el-table-column prop="concurrent" label="并发任务" width="100" />
-        <el-table-column prop="price" label="价格" width="100" />
-        <el-table-column prop="desc" label="说明" />
+        <el-table-column prop="name" label="套餐" width="120" />
+        <el-table-column label="价格" width="110">
+          <template #default="{ row }"><span>{{ row.price === 0 ? '免费' : '¥' + row.price + '/月' }}</span></template>
+        </el-table-column>
+        <el-table-column label="每日线索" width="100">
+          <template #default="{ row }"><span>{{ row.features.daily_leads }} 条</span></template>
+        </el-table-column>
+        <el-table-column label="渠道" width="90">
+          <template #default="{ row }"><span>{{ row.features.channels }} 个</span></template>
+        </el-table-column>
+        <el-table-column label="评论采集" width="90">
+          <template #default="{ row }"><span>{{ row.features.allow_comments ? '支持' : '禁' }}</span></template>
+        </el-table-column>
+        <el-table-column label="关键词" width="90">
+          <template #default="{ row }"><span>{{ row.features.keyword_limit === -1 ? '不限' : row.features.keyword_limit }}</span></template>
+        </el-table-column>
+        <el-table-column prop="tag" label="定位" width="90" />
       </el-table>
+      <div class="mt8" style="color: #909399; font-size: 12px; line-height: 1.6">
+        <div v-for="(v, k) in selectedPlan?.restrictions || {}" :key="k" style="margin-top: 2px">· {{ v }}</div>
+      </div>
       <template #footer>
         <el-button @click="upgradeVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedPlan" @click="doUpgrade">确认升级</el-button>
+        <el-button type="primary" :disabled="!selectedPlan || selectedPlan.id === 'free'" @click="doUpgrade">确认升级</el-button>
       </template>
     </el-dialog>
 
@@ -83,16 +101,15 @@ import api from '../api'
 import PaymentConfirm from '../components/PaymentConfirm.vue'
 
 const profile = reactive({ username: '', nickname: '', email: '', phone: '' })
-const plan = reactive({ plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false })
+const plan = reactive({ plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false, allow_comments: false, sub_accounts: 0, crm: false })
 const logs = ref([])
 const saving = ref(false)
 const upgradeVisible = ref(false)
 const selectedPlan = ref(null)
 const payVisible = ref(false)
-const plans = [
-  { name: '专业版', quota: 10000, concurrent: 5, price: '¥199/月', desc: '适合中小企业', value: 'pro' },
-  { name: '旗舰版', quota: 50000, concurrent: 20, price: '¥599/月', desc: '适合批量获客团队', value: 'premium' }
-]
+const plans = ref([])
+const planMap = { free: '免费版', standard: '小微个体户版', enterprise: '企业团队版' }
+const planName = computed(() => planMap[plan.plan_type] || plan.plan_type)
 
 const quotaPercent = computed(() => plan.quota_total ? Math.min(100, Math.round(plan.quota_used / plan.quota_total * 100)) : 0)
 
@@ -114,8 +131,12 @@ const saveProfile = async () => {
   }
 }
 
-const upgrade = () => {
+const upgrade = async () => {
   selectedPlan.value = null
+  if (!plans.value.length) {
+    const d = await api.get('/plans')
+    plans.value = d.results
+  }
   upgradeVisible.value = true
 }
 
@@ -125,8 +146,8 @@ const doUpgrade = async () => {
 }
 
 const doPay = async () => {
-  await ElMessageBox.confirm(`确认支付升级到${selectedPlan.value.name}？`, '支付确认', { type: 'info' })
-  await api.post('/auth/plan', { plan_type: selectedPlan.value.value })
+  await ElMessageBox.confirm(`确认支付升级到${selectedPlan.value.name}（¥${selectedPlan.value.price}/月）？`, '支付确认', { type: 'info' })
+  await api.post('/auth/plan', { plan_id: selectedPlan.value.id })
   ElMessage.success('升级成功')
   upgradeVisible.value = false
   load()
@@ -138,4 +159,5 @@ onMounted(load)
 <style scoped>
 .mt16 { margin-top: 16px; }
 .mb16 { margin-bottom: 16px; }
+.mt8 { margin-top: 8px; }
 </style>
