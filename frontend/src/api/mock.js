@@ -1,24 +1,19 @@
 // 演示数据层：GitHub Pages 静态环境无后端 API，用 Mock 数据让全站可演示
 // 数据结构与 Django 后端 API 完全一致
 
-// 真实数据快照（由 backend/export_real_data.py 从数据库导出）
-// 懒加载：real-data.json 作为独立静态资源（public/），避免打包进主 bundle 导致体积过大
+import { EMBED_LEADS } from './embed-data.js'
+
+// 真实数据（内嵌进 bundle，彻底绕开 CDN fetch 截断问题）
 let _REAL_DATA = null
-let _REAL_PROMISE = null
-const realDataUrl = (import.meta.env.BASE_URL || '/') + 'real-data.json'
 function getRealData() {
-  if (_REAL_DATA) return Promise.resolve(_REAL_DATA)
-  if (!_REAL_PROMISE) {
-    _REAL_PROMISE = fetch(realDataUrl, { cache: 'no-cache' })
-      .then(r => {
-        if (!r.ok) throw new Error('real-data.json 加载失败: ' + r.status)
-        return r.json()
-      })
-      .then(d => { _REAL_DATA = d; return d })
-      .catch(e => { _REAL_PROMISE = null; throw e })
+  if (!_REAL_DATA) {
+    _REAL_DATA = EMBED_LEADS
+    console.log('[mock] 使用内嵌数据:', _REAL_DATA.leads.length, '条')
   }
-  return _REAL_PROMISE
+  return _REAL_DATA
 }
+// 兼容同步调用
+function getRealDataSync() { return getRealData() }
 
 const NOW = Date.now()
 const daysAgo = n => {
@@ -381,15 +376,13 @@ async function route(config) {
   let url = config.url || ''
   const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {}
   const params = Object.assign({}, config.params || {})
-  // 懒加载真实数据（首次请求时 fetch，之后内存缓存）；失败时降级为空数据不阻塞演示
-  try {
-    const real = await getRealData()
-    if (!LEADS.length) LEADS = real.leads || []
-    if (!KEYWORDS.length) KEYWORDS = real.keywords || []
-    if (!TASKS.length) TASKS = real.tasks || []
-    if (!HEATMAP.length) HEATMAP = (real.region_distribution || []).map(r => ({ name: r.name, value: r.value }))
-  } catch (e) {
-    console.warn('[mock] real-data 加载失败，使用空数据:', e.message)
+  // 同步使用内嵌真实数据（无需等待 fetch，构建时已打包）
+  {
+    const real = getRealData()
+    LEADS = real.leads || []
+    KEYWORDS = real.keywords || []
+    TASKS = real.tasks || []
+    HEATMAP = (real.region_distribution || []).map(r => ({ name: r.name, value: r.value }))
   }
   // 兼容 URL 内嵌 query（如 /stats/distribution?kind=intent）
   const qIdx = url.indexOf('?')
@@ -637,8 +630,7 @@ async function route(config) {
   if (url === '/misc/industry-leads' && method === 'get') {
     // 真实数据 -> 导航线索结构（合规：不展示手机号/联系人真实信息，contact 用脱敏作者）
     const realToNav = l => {
-      const tags = l.tags || []
-      const ind = tags.find(t => NAV_INDUSTRY_TAGS.includes(t)) || ''
+      const ind = l.industry || ''
       const demand = l.demand || ''
       const field = (NAV_FIELD_MAP[ind] || []).find(f => (l.title || '').includes(f) || (l.content || '').includes(f)) || (NAV_FIELD_MAP[ind] || [])[0] || demand
       const scenario = demand || '综合咨询'
@@ -865,23 +857,28 @@ async function route(config) {
       }
       return json({ detail: '平台无效' }, 400)
     }
+  }
 
-  // ---------- 真实数据线索（MediaCrawler 采集导入） ----------
+  // ---------- 真实数据线索（MediaCrawler 采集导入，内嵌数据） ----------
   if (url === '/crawler/realleads' && method === 'get') {
     const limit = Math.min(parseInt(params.limit || 100, 10) || 100, 200)
     const keyword = (params.keyword || '').toLowerCase()
     const platform = (params.platform || '').toLowerCase()
     const industry = (params.industry || '').toLowerCase()
-    const real = LEADS.filter(l => l.tags && l.tags.some(t => String(t).indexOf('真实数据') >= 0))
-    let rows = real
+    const customer = (params.customer || '').toLowerCase()
+    // 内嵌数据全部为真实数据（无需标签过滤）
+    let rows = LEADS
     if (keyword) rows = rows.filter(l => ((l.title || '') + (l.content || '') + (l.author || '')).toLowerCase().indexOf(keyword) >= 0)
     if (platform) rows = rows.filter(l => (l.platform || '').toLowerCase() === platform)
-    if (industry) rows = rows.filter(l => (l.tags || []).some(t => String(t).toLowerCase().indexOf(industry) >= 0))
+    if (industry) rows = rows.filter(l => (l.industry || '').toLowerCase().indexOf(industry) >= 0)
+    if (customer === 'yes') rows = rows.filter(l => l.is_customer === true)
+    if (customer === 'no') rows = rows.filter(l => l.is_customer !== true)
+    const total = rows.length
     rows = rows.slice(0, limit).map(l => ({
       id: l.id,
       platform: l.platform,
       platform_name: ({ douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' })[l.platform] || l.platform,
-      item_id: l.item_id,
+      item_id: l.item_id || '',
       title: l.title || '',
       content: l.content || '',
       author: l.author || '',
@@ -892,10 +889,10 @@ async function route(config) {
       publish_time: l.publish_time || '',
       intent_score: l.intent_score || 0,
       intent_label: l.intent_label || 'none',
-      industry: (l.tags || []).find(t => String(t).indexOf('行业') >= 0) || '',
-      tags: l.tags || [],
+      industry: l.industry || '',
+      is_customer: l.is_customer === true || l.is_customer === 1 ? true : (l.is_customer === false || l.is_customer === 0 ? false : null),
+      tags: [],
       region: l.region || '',
-      is_customer: l.is_customer,
       customer_type: l.customer_type || '',
       needs: l.needs || '',
       contact_hint: l.contact_hint || ''
@@ -909,7 +906,7 @@ async function route(config) {
     const names = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
     // 演示：从真实数据快照中抽取命中关键词的条目作为导入结果
     const kw = keyword
-    const candidates = LEADS.filter(l => ((l.title || '') + (l.content || '')).indexOf(kw) >= 0 || (l.tags || []).some(t => String(t).indexOf(kw) >= 0))
+    const candidates = LEADS.filter(l => ((l.title || '') + (l.content || '')).indexOf(kw) >= 0 || (l.industry || '').indexOf(kw) >= 0)
     const picked = candidates.length ? candidates.slice(0, 20) : []
     return json({
       success: true,
@@ -926,6 +923,7 @@ async function route(config) {
 
   // ---------- 行业关键词批量自动采集 ----------
   if (url === '/crawler/industry/batch' && method === 'post') {
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
     const ind = (body.industry || '').trim()
     const plats = Array.isArray(body.platforms) ? body.platforms : ['weibo']
     const mk = Math.max(1, Math.min(parseInt(body.max_keywords || 8, 10) || 8, 15))
@@ -949,7 +947,7 @@ async function route(config) {
     const batchId = 'MOCK' + Date.now().toString().slice(-8)
     MOCK_BATCHES.unshift({
       batch_id: batchId, industry: ind, platforms: plats, status: 'running',
-      created_at: now(), finished_at: null, total_keywords: keywords.length,
+      created_at: now, finished_at: null, total_keywords: keywords.length,
       completed_keywords: 0, imported_count: 0,
       sub_tasks: keywords.map(k => ({ keyword: k, platform: plats[0], task_id: null, status: 'pending', result_count: 0, import_result: 0, error: null })),
     })
@@ -957,7 +955,7 @@ async function route(config) {
     const b = MOCK_BATCHES[0]
     let done = 0
     const timer = setInterval(() => {
-      if (done >= b.sub_tasks.length) { clearInterval(timer); b.status = 'completed'; b.finished_at = now(); return }
+      if (done >= b.sub_tasks.length) { clearInterval(timer); b.status = 'completed'; b.finished_at = now; return }
       b.sub_tasks[done].status = 'completed'
       b.sub_tasks[done].result_count = 5 + done * 3
       b.sub_tasks[done].import_result = 3 + done * 2
@@ -981,10 +979,6 @@ async function route(config) {
       platforms: [{ code: 'weibo', name: '微博' }, { code: 'douyin', name: '抖音' }, { code: 'xiaohongshu', name: '小红书' }, { code: 'kuaishou', name: '快手' }, { code: 'zhihu', name: '知乎' }, { code: 'tieba', name: '贴吧' }],
     } })
   }
-
-  }
-
-
 
   // ---------- 商业化: 套餐/增值/优惠券 ----------
   if (url === '/plans') {
