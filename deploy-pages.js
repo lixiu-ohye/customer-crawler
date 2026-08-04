@@ -59,7 +59,14 @@ function collectFiles(dir, prefix = '') {
     const rel = prefix ? `${prefix}/${name}` : name
     const stat = fs.statSync(full)
     if (stat.isDirectory()) out.push(...collectFiles(full, rel))
-    else out.push({ rel, full })
+    else {
+      // real-data.json 由单独脚本用 Contents API 上传（大文件 Git Data API 会被网络层拦截 401）
+      if (rel === 'real-data.json') {
+        console.log('   跳过 real-data.json（用 Contents API 单独上传）')
+        continue
+      }
+      out.push({ rel, full })
+    }
   }
   return out
 }
