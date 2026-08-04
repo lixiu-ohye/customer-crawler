@@ -104,6 +104,7 @@ def run_keyword(keyword, platform="wb", max_notes=NOTES_PER_KEYWORD):
         "--crawler_max_notes_count", str(max_notes),
         "--headless", "true",
         "--save_data_option", "jsonl",
+        "--get_comment", "true",  # 搜索时顺带抓评论（评论区获客数据源）
     ]
     logger.info(f"[auto_crawl] RUN: {keyword} ({platform})")
     try:
