@@ -298,12 +298,34 @@ def run_glm_batch(batch, ai_filter):
         return 0
 
 
+def backfill_glm(ai_filter):
+    """补跑：对 is_customer=None 的评论线索执行 GLM 筛选"""
+    from apps.leads.models import Lead
+    qs = Lead.objects.filter(note__startswith="来源：", is_customer__isnull=True)
+    total = qs.count()
+    logger.info("补跑 GLM 筛选: 待分类评论线索 %d 条", total)
+    if not total:
+        return 0
+    customers = 0
+    batch = []
+    for lead in qs.iterator():
+        batch.append((lead, lead.content or ""))
+        if len(batch) >= 12:
+            customers += run_glm_batch(batch, ai_filter)
+            batch = []
+    if batch:
+        customers += run_glm_batch(batch, ai_filter)
+    logger.info("补跑完成: 新增客户 %d", customers)
+    return customers
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="评论区获客矿工")
     parser.add_argument("--platform", default="", help="平台逗号分隔，默认全部")
     parser.add_argument("--days", type=int, default=2, help="扫描最近 N 天文件")
     parser.add_argument("--convert", action="store_true", help="仅转换不重新导入（预留）")
+    parser.add_argument("--backfill", action="store_true", help="只补跑 GLM 筛选（不导入新评论）")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -314,6 +336,15 @@ def main():
             logging.FileHandler(BACKEND_DIR / "comment_lead_miner.log", encoding="utf-8"),
         ],
     )
+
+    ai_filter = CustomerAIFilter()
+    logger.info("GLM 筛选: %s (fallback g2claw: %s)",
+                "启用" if ai_filter.enabled else "未启用（API key 缺失）",
+                "启用" if ai_filter.fallback_enabled else "未启用")
+
+    if args.backfill:
+        backfill_glm(ai_filter)
+        return
 
     platforms = [p.strip() for p in args.platform.split(",") if p.strip()] if args.platform else list(PLATFORM_DIR.keys())
     logger.info("=== 评论区获客矿工启动: platforms=%s days=%d ===", platforms, args.days)
