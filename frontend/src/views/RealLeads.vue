@@ -58,7 +58,7 @@
           <el-tag :type="scoreType(row.intent_score)" size="small">{{ row.intent_score }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="客户" width="85" fixed="left">
+      <el-table-column label="客户" width="85">
         <template #default="{ row }">
           <el-tag v-if="row.is_customer === true" type="danger" size="small">客户</el-tag>
           <el-tag v-else-if="row.is_customer === false" type="info" size="small">非客户</el-tag>
@@ -80,7 +80,7 @@
       </el-table-column>
       <el-table-column prop="region" label="地区" width="80" show-overflow-tooltip />
       <el-table-column prop="publish_time" label="发布时间" width="150" />
-      <el-table-column label="原文" width="80" fixed="right">
+      <el-table-column label="原文" width="80">
         <template #default="{ row }">
           <el-link type="primary" :href="row.url" target="_blank" underline="never">查看</el-link>
         </template>
