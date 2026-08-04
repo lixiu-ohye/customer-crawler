@@ -9,6 +9,7 @@ from pathlib import Path
 
 from apps.crawler.services.intent_scoring import IntentScoring
 from apps.crawler.services.content_filter import classify_content
+from apps.crawler.services.customer_ai_filter import CustomerAIFilter
 
 MEDIACRAWLER_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "MediaCrawler"
 
@@ -50,6 +51,7 @@ SCENE_WORDS = {
     "本地生活": ["美食", "探店", "团购", "景区", "门票", "酒店", "民宿", "餐厅"],
     "电商零售": ["淘宝", "拼多多", "抖音电商", "直播带货", "开店", "货源", "爆款", "选品"],
     "金融理财": ["贷款", "理财", "保险", "信用卡", "投资", "基金", "股票", "公积金"],
+    "宠物服务": ["宠物", "猫咪", "狗狗", "猫粮", "狗粮", "猫砂", "宠物美容", "宠物医院", "宠物寄养", "宠物疫苗", "宠物皮肤病", "宠物驱虫", "宠物洗澡", "宠物零食", "宠物玩具", "猫狗", "铲屎官", "宠物用品", "绝育", "宠物殡葬", "宠物摄影"],
 }
 
 # 场景（领域）→ 行业映射（用于 tags 中的行业标签）
@@ -58,6 +60,7 @@ SCENE_INDUSTRY = {
     "教育培训": "教育培训", "医美健康": "美业医美", "汽车服务": "汽车服务行业",
     "企业服务": "企业B端财税商务服务", "本地生活": "本地生活", "电商零售": "电商零售",
     "金融理财": "金融理财",
+    "宠物服务": "宠物行业",
 }
 
 
@@ -229,15 +232,24 @@ def import_jsonl(user, platform="weibo", keyword="", task_id=""):
                     if intent_label in ("high", "medium"):
                         intent_label = "low"
 
-                # 内容质量过滤：小说/无关内容跳过，低价值打标记
-                q_action, q_reason = classify_content(title, content)
-                if q_action == "junk":
-                    filtered_junk += 1
-                    continue
-                if q_action == "low_value":
-                    tags.append(f"低价值:{q_reason}")
-                    if intent_label in ("high", "medium"):
-                        intent_label = "low"
+                # GLM 客户筛选：判断发布者是否为潜在客户（SAAS 机制）
+                try:
+                    _cf = CustomerAIFilter()
+                    _cr = _cf.classify(title, content, author, sys_platform, industry or "")
+                    is_cust = bool(_cr.get("is_customer"))
+                    if is_cust:
+                        tags.append("客户")
+                        ctype = _cr.get("customer_type") or "medium"
+                        if ctype in ("high", "medium", "low"):
+                            tags.append(f"客户:{ctype}")
+                    else:
+                        tags.append("非客户")
+                except Exception as _e:
+                    is_cust = None
+                    _cr = {}
+                _cust_ok = False
+                if "is_customer" in _cr and _cr.get("is_customer") is not None:
+                    _cust_ok = True
 
                 Lead.objects.create(
                     user=user,
@@ -259,6 +271,11 @@ def import_jsonl(user, platform="weibo", keyword="", task_id=""):
                     region=region,
                     demand=scene,
                     tags=tags,
+                    is_customer=is_cust,
+                    customer_type=_cr.get("customer_type", "") if _cust_ok else "",
+                    customer_reason=_cr.get("reason", "") if _cust_ok else "",
+                    contact_hint=_cr.get("contact_hint", "") if _cust_ok else "",
+                    needs=_cr.get("needs", "") if _cust_ok else "",
                 )
                 imported += 1
 
