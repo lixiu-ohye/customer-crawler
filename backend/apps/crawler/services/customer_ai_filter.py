@@ -25,6 +25,7 @@ SAAS 获客平台（如探迹、纷享销客）的筛选逻辑：
     }
 """
 import json
+import logging
 import os
 import re
 import time
@@ -41,11 +42,28 @@ if not API_KEY:
 
 API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 MODEL = "glm-4.5-air"
+
+# 备用通道：g2claw（zai 余额不足时自动切换）
+FALLBACK_API_URL = "https://api.g2claw.com/v1/chat/completions"
+FALLBACK_MODEL = "glm-5.1"
+FALLBACK_API_KEY = ""
+if not FALLBACK_API_KEY:
+    try:
+        cfg = json.loads(Path(os.path.expanduser("~/.qclaw/openclaw.json")).read_text(encoding="utf-8"))
+        _p = cfg.get("models", {}).get("providers", {})
+        FALLBACK_API_KEY = (_p.get("custom-1785656140890", {}) or {}).get("apiKey", "")  # glm-5.1
+    except Exception:
+        FALLBACK_API_KEY = ""
+
 MAX_TOKENS = 1024
 TIMEOUT = 45
 BATCH_SIZE = 12  # 每批条数（控制 token）
 MAX_RETRY = 2
 _CACHE = {}  # (title, content) -> result 内存缓存
+
+# zai 连续失败计数：>=3 次后全局切 g2claw 主通道（避免每批白等 429）
+_ZAI_FAILS = 0
+_USE_FALLBACK_PRIMARY = False
 
 
 SYSTEM_PROMPT = """你是一个专业的大数据获客系统的客户筛选引擎，负责判断社交媒体内容发布者是否为「潜在客户」。
@@ -85,6 +103,7 @@ class CustomerAIFilter:
     def __init__(self, api_key=None):
         self.api_key = api_key or API_KEY
         self.enabled = bool(self.api_key)
+        self.fallback_enabled = bool(FALLBACK_API_KEY)
         # 强规则快速路径：明显的营销号/博主特征
         self.MARKETING_RE = re.compile(r"关注我|点赞收藏|转发抽奖|免费领取|限时优惠|点击下方|评论区|私信我(领取|获取|报名|进群|发你|发资料)|加微信|扫码|领取资料|直播间|橱窗|小黄车|购物车|主页置顶|商务合作|广告位|测评|探店打卡|干货|教程|攻略|避坑指南|经验分享|必看|速通|一定要收藏|收藏好|转发给|提醒大家|请注意|注意了|戳我|帮你报价|10秒|报价方案|计算器|一键|9张图|几张图|这篇文章|看完这篇|建议收藏|避坑|踩雷|种草|安利|团购|拼团|预约|到店|门店|线下体验|免费设计|免费量房|免费上门|领取|进群|添加微信|联系方式在|主页有|私我|普通人|一生要花|大家注意看|给大?科普|科普一下|涨知识|生活小妙招|冷知识|实用帖|干货满满")
         # 服务提供者特征：律师/医生/商家自我介绍、服务范围、接单说明
@@ -141,9 +160,29 @@ class CustomerAIFilter:
             "temperature": 0.2,
         }
         last_err = None
+        global _ZAI_FAILS, _USE_FALLBACK_PRIMARY
         for attempt in range(MAX_RETRY + 1):
             try:
                 import urllib.request
+                # 已全局切 g2claw 主通道时直接走 fallback
+                if _USE_FALLBACK_PRIMARY and FALLBACK_API_KEY:
+                    body2 = {**body, "model": FALLBACK_MODEL}
+                    req = urllib.request.Request(
+                        FALLBACK_API_URL,
+                        data=json.dumps(body2).encode("utf-8"),
+                        headers={"Content-Type": "application/json", "Authorization": "Bearer " + FALLBACK_API_KEY},
+                    )
+                    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                    content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
+                    if not content:
+                        content = (data.get("choices") or [{}])[0].get("message", {}).get("reasoning_content", "")
+                    arr = self._extract_json(content)
+                    if arr is not None:
+                        return arr
+                    last_err = f"fallback parse fail: {content[:100]}"
+                    continue
+
                 req = urllib.request.Request(
                     API_URL,
                     data=json.dumps(body).encode("utf-8"),
@@ -164,6 +203,31 @@ class CustomerAIFilter:
                 last_err = f"parse fail: {content[:100]}"
             except Exception as e:
                 last_err = str(e)
+                # zai 失败（余额不足/限流）→ 自动切换 g2claw 备用通道
+                if FALLBACK_API_KEY and ("429" in str(e) or "余额" in str(e) or "resource" in str(e).lower()):
+                    _ZAI_FAILS += 1
+                    if _ZAI_FAILS >= 3:
+                        _USE_FALLBACK_PRIMARY = True
+                        logger = logging.getLogger("customer_ai_filter")
+                        logger.info("zai 连续失败 %d 次，全局切换 g2claw 主通道", _ZAI_FAILS)
+                    logger = logging.getLogger("customer_ai_filter")
+                    logger.info("zai 通道失败(%s)，尝试 g2claw 备用通道", str(e)[:80])
+                    try:
+                        import urllib.request as _ur
+                        req = _ur.Request(
+                            FALLBACK_API_URL,
+                            data=json.dumps({**body, "model": FALLBACK_MODEL}).encode("utf-8"),
+                            headers={"Content-Type": "application/json", "Authorization": "Bearer " + FALLBACK_API_KEY},
+                        )
+                        with _ur.urlopen(req, timeout=TIMEOUT) as resp:
+                            data = json.loads(resp.read().decode("utf-8"))
+                        content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
+                        arr = self._extract_json(content)
+                        if arr is not None:
+                            return arr
+                        last_err = f"fallback parse fail: {content[:100]}"
+                    except Exception as e2:
+                        last_err = f"fallback fail: {e2}"
                 time.sleep(2 * (attempt + 1))
         if last_err:
             return None
