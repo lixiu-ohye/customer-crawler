@@ -80,12 +80,34 @@
       </el-table-column>
       <el-table-column prop="region" label="地区" width="80" show-overflow-tooltip />
       <el-table-column prop="publish_time" label="发布时间" width="150" />
-      <el-table-column label="原文" width="80">
+      <el-table-column label="原文" width="70">
         <template #default="{ row }">
           <el-link type="primary" :href="row.url" target="_blank" underline="never">查看</el-link>
         </template>
       </el-table-column>
+      <el-table-column label="跟进" width="150">
+        <template #default="{ row }">
+          <el-tag v-if="row.crm_status === 'follow'" type="primary" size="small">跟进中</el-tag>
+          <el-tag v-else-if="row.crm_status === 'deal'" type="success" size="small">已成交</el-tag>
+          <el-tag v-else-if="row.crm_status === 'sea'" type="warning" size="small">公海中</el-tag>
+          <el-tag v-else-if="row.crm_status === 'abandon'" type="info" size="small">已放弃</el-tag>
+          <el-tag v-else type="default" size="small">未跟进</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="200">
+        <template #default="{ row }">
+          <el-button v-if="row.crm_status !== 'follow'" size="small" type="primary" plain @click="crmSet(row, 'follow')">跟进</el-button>
+          <el-button v-if="row.crm_status === 'follow'" size="small" type="success" plain @click="crmSet(row, 'deal')">成交</el-button>
+          <el-button v-if="row.crm_status !== 'sea'" size="small" type="warning" plain @click="crmSet(row, 'sea')">转公海</el-button>
+          <el-button v-if="row.crm_status === 'sea'" size="small" @click="crmSet(row, 'new')">回收</el-button>
+        </template>
+      </el-table-column>
     </el-table>
+
+    <div class="mt12">
+      <el-button size="small" :loading="seaLoading" @click="loadSea">公海回收站</el-button>
+      <span class="sub" style="margin-left: 8px">公海 = 超过跟进时限自动回收的线索，可重新领取</span>
+    </div>
 
     <el-empty v-if="!loading && rows.length === 0" description="暂无真实数据，请先运行采集任务并导入" />
   </div>
@@ -93,7 +115,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
 import api from '../api'
 
@@ -169,6 +191,43 @@ const doImport = async () => {
   }
 }
 
+// ---------- CRM 跟进 ----------
+const seaLoading = ref(false)
+const crmSet = async (row, status) => {
+  try {
+    await api.post('/crm/status', { id: row.id, status })
+    const map = { follow: '已标记跟进中', deal: '已标记成交 🎉', sea: '已转入公海', new: '已回收', abandon: '已放弃' }
+    ElMessage.success(map[status] || '已更新')
+    load()
+  } catch (e) {
+    ElMessage.error('更新失败：' + (e.message || e))
+  }
+}
+
+const loadSea = async () => {
+  seaLoading.value = true
+  try {
+    const r = await api.get('/crm/sea', { params: { limit: 50 } })
+    const list = r.results || []
+    if (!list.length) {
+      ElMessage.info('公海暂无线索')
+      return
+    }
+    ElMessageBox.confirm(
+      `公海现有 ${list.length} 条线索，点击「回收」可重新领取第一条。`,
+      '公海回收站', { type: 'info', confirmButtonText: '回收第一条', cancelButtonText: '关闭' }
+    ).then(async () => {
+      await api.post('/crm/sea', { id: list[0].id })
+      ElMessage.success('已回收一条线索')
+      load()
+    }).catch(() => {})
+  } catch (e) {
+    ElMessage.error('公海加载失败：' + (e.message || e))
+  } finally {
+    seaLoading.value = false
+  }
+}
+
 onMounted(() => {
   // 支持全局搜索跳转参数
   if (route.query.kw) {
@@ -195,4 +254,5 @@ onUnmounted(() => { window.removeEventListener('mock:realDataReady', onRealDataR
 .interact { font-weight: 600; color: #606266; }
 .search-icon { font-size: 13px; }
 .lead-table :deep(.el-table__body-wrapper) { overflow-x: auto; }
+.mt12 { margin-top: 12px; }
 </style>
