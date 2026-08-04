@@ -27,6 +27,14 @@ let KEYWORDS = []
 let TASKS = []
 let HEATMAP = []
 
+// 当前用户套餐（演示态：管理员为 enterprise 企业团队版）
+let CURRENT_PLAN = 'enterprise'
+
+// ---------- CRM 跟进状态（内存态：lead_id -> 状态） ----------
+const CRM_STATUS = {}
+// 公海线索（超时未跟进回收）
+const CRM_SEA = new Set()
+
 const GROUPS = [
   { id: 1, name: '核心词', count: 4 },
   { id: 2, name: '工装', count: 1 },
@@ -127,11 +135,9 @@ const json = (data, status = 200) => Promise.resolve({ data, status })
 
 // ---------- 商业化: 5 档套餐 ----------
 const PLANS = [
-  { id: 'free', name: '免费试用版', price: 0, yearly_price: 0, tag: '引流款', features: { concurrent_tasks: 1, daily_leads: 30, ai_summary: 10, ai_copy: 5, export_limit: 50, monitoring: 0, templates: 0, heatmap: false, sub_accounts: 0, lead_lock: false }, restrictions: { crawl_speed: '低速15分钟间隔', keyword_limit: 20, lead_masking: '轻度脱敏', retention: '7天' } },
-  { id: 'basic', name: '简易创业体验版', price: 59, yearly_price: 599, tag: '兼职过渡', features: { concurrent_tasks: 3, daily_leads: 180, ai_summary: 150, ai_copy: 80, export_limit: 1000, monitoring: 2, templates: 1, heatmap: '简易', sub_accounts: 0, lead_lock: false }, restrictions: { regional: '无区县过滤', support: '无优先客服' } },
-  { id: 'standard', name: '小微个体户盈利版', price: 199, yearly_price: 1999, tag: '主力盈利', features: { concurrent_tasks: 10, daily_leads: 800, ai_monthly: 50000, export_limit: 10000, monitoring: -1, templates: -1, heatmap: '完整', sub_accounts: 1, lead_lock: true }, restrictions: { data_reports: false, operation_service: false }, yearly_bonus: '赠3个月小额扩容包' },
-  { id: 'professional', name: '企业团队尊享版', price: 399, yearly_price: 3999, tag: '高利润核心', features: { concurrent_tasks: 25, daily_leads: 3000, ai_monthly: 150000, export_limit: 100000, monitoring: -1, templates: -1, heatmap: '完整', sub_accounts: 6, lead_lock: true, data_reports: true, operation_service: true }, restrictions: { permission_levels: false, private_deploy: false }, yearly_bonus: '赠3个月大额扩容包+15天AI高级文案' },
-  { id: 'enterprise', name: '机构定制大客户版', price: 7288, yearly_price: 7288, tag: '机构大客户', features: { concurrent_tasks: -1, daily_leads: 10000, ai_monthly: -1, export_limit: -1, monitoring: -1, templates: 'custom', heatmap: '完整', sub_accounts: -1, lead_lock: true, data_reports: true, operation_service: true, permission_levels: true, private_deploy: true }, restrictions: {}, addons: { branding: 1800 } }
+  { id: 'free', name: '免费版', price: 0, yearly_price: 0, tag: '体验试用', features: { concurrent_tasks: 1, daily_leads: 30, channels: 2, allow_comments: false, export_limit: 2, schedule_options: 0, keyword_limit: 20, sub_accounts: 0, crm: false, heatmap: false, ai_analysis: false, lead_retention_days: 7 }, restrictions: { crawl_speed: '低速（15分钟间隔）', channels_desc: '仅抖音/微博', comment_crawl: '禁评论采集', export_desc: '每日最多导出2次', retention: '线索留存7天' } },
+  { id: 'standard', name: '小微个体户版', price: 199, yearly_price: 1999, tag: '主力盈利', features: { concurrent_tasks: 10, daily_leads: 120, channels: 6, allow_comments: true, export_limit: 10, schedule_options: 3, keyword_limit: 200, sub_accounts: 0, crm: '基础', heatmap: '完整', ai_analysis: true, lead_retention_days: 30 }, restrictions: { channels_desc: '6大平台全渠道', comment_crawl: '主帖+评论采集', export_desc: '每日最多导出10次', schedule_desc: '任务级定时 6h/12h/24h', crm_desc: '基础CRM跟进' }, yearly_bonus: '赠1个月扩容包' },
+  { id: 'enterprise', name: '企业团队版', price: 399, yearly_price: 3999, tag: '高利润核心', features: { concurrent_tasks: 25, daily_leads: 300, channels: 6, allow_comments: true, export_limit: -1, schedule_options: 3, keyword_limit: -1, sub_accounts: 5, crm: '完整', heatmap: '完整', ai_analysis: true, lead_retention_days: 90 }, restrictions: { channels_desc: '6大平台全渠道', comment_crawl: '主帖+评论采集', export_desc: '不限导出次数', schedule_desc: '任务级定时 6h/12h/24h', crm_desc: '完整CRM+公海回收' }, yearly_bonus: '赠3个月扩容包+子账号扩容' }
 ]
 const ADDON_SERVICES = [
   { code: 'lead_expansion_small', name: '小额线索扩容包', desc: '+300条/日', price: 49, type: 'monthly' },
@@ -401,21 +407,26 @@ async function route(config) {
   // 认证
   if (url === '/auth/login' && method === 'post') {
     if (body.username === 'admin' && body.password === 'admin123456') {
+      CURRENT_PLAN = 'enterprise'
       return json({
         token: 'mock-jwt-token-for-demo',
-        user: { id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'premium', quota_used: 12, quota_total: 50000, expire_at: '2027-01-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true } }
+        user: { id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'enterprise', quota_used: 12, quota_total: 300, expire_at: '2027-01-01', concurrent_tasks: 25, daily_crawl_limit: 300, api_access: true, allow_comments: true, sub_accounts: 5, crm: '完整' } }
       })
     }
     return json({ detail: '用户名或密码错误' }, 400)
   }
   if (url === '/auth/register' && method === 'post') {
-    return json({ token: 'mock-jwt-token-for-demo', user: { id: 2, username: body.username, nickname: body.username, email: body.email || '', phone: '', role_type: 'user', plan: { plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false } } })
+    CURRENT_PLAN = 'free'
+    return json({ token: 'mock-jwt-token-for-demo', user: { id: 2, username: body.username, nickname: body.username, email: body.email || '', phone: '', role_type: 'user', plan: { plan_type: 'free', quota_used: 0, quota_total: 30, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 30, api_access: false, allow_comments: false, sub_accounts: 0, crm: false } } })
   }
   if (url === '/auth/profile') {
-    return json({ id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'premium', quota_used: 12, quota_total: 50000, expire_at: '2027-01-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true } })
+    return json({ id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'enterprise', quota_used: 12, quota_total: 300, expire_at: '2027-01-01', concurrent_tasks: 25, daily_crawl_limit: 300, api_access: true, allow_comments: true, sub_accounts: 5, crm: '完整' } })
   }
   if (url === '/auth/plan' && method === 'post') {
-    return json({ detail: '套餐已升级' })
+    const pid = (body && body.plan_id) || 'standard'
+    const p = PLANS.find(x => x.id === pid) || PLANS[1]
+    CURRENT_PLAN = p.id
+    return json({ detail: '套餐已升级至' + p.name, plan: { plan_type: p.id, quota_used: 0, quota_total: p.features.daily_leads, expire_at: daysAgo(0).slice(0, 10), concurrent_tasks: p.features.concurrent_tasks, daily_crawl_limit: p.features.daily_leads, api_access: p.features.channels >= 6, allow_comments: p.features.allow_comments, sub_accounts: p.features.sub_accounts, crm: p.features.crm } })
   }
 
   // 仪表盘统计
@@ -521,7 +532,7 @@ async function route(config) {
     return json({ results: list, total: list.length })
   }
   if (url === '/tasks/' && method === 'post') {
-    const task = { id: TASKS.length + 1, name: body.name || (body.keywords || '').slice(0, 20), keywords: body.keywords, platforms: body.platforms, status: 'running', progress: Math.floor(Math.random() * 20), message: '任务已启动', created_at: daysAgo(0) }
+    const task = { id: TASKS.length + 1, name: body.name || (body.keywords || '').slice(0, 20), keywords: body.keywords, platforms: body.platforms, schedule_type: body.schedule_type || '', status: 'running', progress: Math.floor(Math.random() * 20), message: '任务已启动', created_at: daysAgo(0) }
     TASKS.unshift(task)
     return json({ result: task }, 201)
   }
@@ -895,15 +906,48 @@ async function route(config) {
       region: l.region || '',
       customer_type: l.customer_type || '',
       needs: l.needs || '',
-      contact_hint: l.contact_hint || ''
+      contact_hint: l.contact_hint || '',
+      crm_status: CRM_STATUS[String(l.id)] || (CRM_SEA.has(String(l.id)) ? 'sea' : 'new')
     }))
     return json({ results: rows, total: rows.length, source: 'real-data.json 快照（数据库导出）' })
+  }
+  // ---------- CRM 线索跟进（PRD V1.2） ----------
+  if (url === '/crm/status' && method === 'post') {
+    const id = String(body.id || '')
+    const status = body.status || 'new'
+    if (!id) return json({ detail: '缺少线索 ID' }, 400)
+    CRM_STATUS[id] = status
+    if (status === 'sea') CRM_SEA.add(id)
+    else CRM_SEA.delete(id)
+    return json({ detail: '跟进状态已更新', id, status })
+  }
+  if (url === '/crm/sea' && method === 'get') {
+    const limit = Math.min(parseInt(params.limit || 50, 10) || 50, 100)
+    const rows = LEADS.filter(l => CRM_SEA.has(String(l.id))).slice(0, limit).map(l => ({
+      id: l.id, platform: l.platform, content: (l.content || '').slice(0, 60), author: l.author || '',
+      industry: l.industry || '', region: l.region || '', url: l.url || '', intent_score: l.intent_score || 0, is_customer: l.is_customer
+    }))
+    return json({ results: rows, total: rows.length })
+  }
+  if (url === '/crm/sea' && method === 'post') {
+    // 从公海回收线索（改回待跟进）
+    const id = String(body.id || '')
+    CRM_SEA.delete(id)
+    CRM_STATUS[id] = 'new'
+    return json({ detail: '已从公海回收', id })
   }
   if (url === '/crawler/mediacrawler/import' && method === 'post') {
     const keyword = (body.keyword || '').trim() || '法律咨询'
     const platform = (body.platform || 'weibo').toLowerCase()
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
     const names = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
+    // 评论采集权限：免费套餐禁止（PRD V1.2 合规红线）
+    const withComments = !!body.with_comments
+    const planKey = (CURRENT_PLAN || 'free')
+    const allowComments = planKey !== 'free'
+    if (withComments && !allowComments) {
+      return json({ success: false, error: 'comment_forbidden', message: '免费版不支持评论采集，请升级小微个体户版（¥199/月）或企业团队版（¥399/月）' }, 403)
+    }
     // 演示：从真实数据快照中抽取命中关键词的条目作为导入结果
     const kw = keyword
     const candidates = LEADS.filter(l => ((l.title || '') + (l.content || '')).indexOf(kw) >= 0 || (l.industry || '').indexOf(kw) >= 0)
@@ -916,7 +960,9 @@ async function route(config) {
       platform,
       platform_name: names[platform] || platform,
       total: picked.length,
-      message: '演示导入完成：从真实数据快照匹配 ' + picked.length + ' 条（' + (names[platform] || platform) + ' / ' + keyword + '）',
+      with_comments: withComments ? (allowComments ? 'enabled' : 'blocked') : 'off',
+      comments_imported: withComments && allowComments ? Math.min(50, picked.length * 3) : 0,
+      message: '演示导入完成：从真实数据快照匹配 ' + picked.length + ' 条（' + (names[platform] || platform) + ' / ' + keyword + '）' + (withComments && allowComments ? '，含评论 ' + Math.min(50, picked.length * 3) + ' 条' : ''),
       imported_at: now
     })
   }
@@ -927,6 +973,11 @@ async function route(config) {
     const ind = (body.industry || '').trim()
     const plats = Array.isArray(body.platforms) ? body.platforms : ['weibo']
     const mk = Math.max(1, Math.min(parseInt(body.max_keywords || 8, 10) || 8, 15))
+    const withComments = !!body.with_comments
+    const allowComments = CURRENT_PLAN !== 'free'
+    if (withComments && !allowComments) {
+      return json({ success: false, error: 'comment_forbidden', message: '免费版不支持评论采集，请升级小微个体户版（¥199/月）或企业团队版（¥399/月）' }, 403)
+    }
     const industryPool = {
       '法律行业': ['婚姻家庭', '刑事辩护', '合同纠纷', '劳动仲裁', '交通事故', '债务纠纷'],
       '装修家居': ['旧房翻新', '办公室装修', '全屋定制', '水电改造', '墙面翻新'],
@@ -962,7 +1013,7 @@ async function route(config) {
       b.completed_keywords = ++done
       b.imported_count += b.sub_tasks[done - 1].import_result
     }, 1500)
-    return json({ success: true, batch_id: batchId, industry: ind, platforms: plats, keywords, sub_task_count: keywords.length * plats.length, message: `已启动行业[${ind}]批量采集，${keywords.length} 个关键词 × ${plats.length} 平台` })
+    return json({ success: true, batch_id: batchId, industry: ind, platforms: plats, keywords, sub_task_count: keywords.length * plats.length, with_comments: withComments, message: `已启动行业[${ind}]批量采集，${keywords.length} 个关键词 × ${plats.length} 平台` + (withComments ? '，含评论采集' : '') })
   }
   if (url === '/crawler/industry/batch' && method === 'get') {
     const id = params.id || ''
