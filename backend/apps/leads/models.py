@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """线索模型"""
 from django.conf import settings
 from django.db import models
@@ -25,17 +26,22 @@ class Lead(models.Model):
     url = models.URLField("原文链接", blank=True, default="")
     like_count = models.IntegerField("点赞", default=0)
     comment_count = models.IntegerField("评论", default=0)
-    share_count = models.IntegerField("转发", default=0)
+    share_count = models.IntegerField("分享", default=0)
     publish_time = models.DateTimeField("发布时间", null=True, blank=True)
     region = models.CharField("地域标签", max_length=50, blank=True, default="")
     demand = models.CharField("需求标签", max_length=50, blank=True, default="")
-    intent_label = models.CharField("意向标签", max_length=16, choices=INTENT_CHOICES, default="none")
+    intent_label = models.CharField("意向等级", max_length=16, choices=INTENT_CHOICES, default="none")
     intent_score = models.IntegerField("意向分", default=0)
     score_breakdown = models.JSONField("打分明细", default=dict, blank=True)
     tags = models.JSONField("标签", default=list, blank=True)
     lng = models.FloatField("经度", null=True, blank=True)
     lat = models.FloatField("纬度", null=True, blank=True)
-    location_text = models.CharField("地点文本", max_length=200, blank=True, default="")
+    location_text = models.CharField("地址文本", max_length=200, blank=True, default="")
+    is_customer = models.BooleanField("是否客户", default=None, null=True, blank=True)
+    customer_type = models.CharField("客户类型", max_length=16, blank=True, default="")
+    customer_reason = models.CharField("客户判定理由", max_length=200, blank=True, default="")
+    contact_hint = models.CharField("联系方式线索", max_length=50, blank=True, default="")
+    needs = models.CharField("客户需求", max_length=200, blank=True, default="")
     status = models.CharField("状态", max_length=16, default="new")
     note = models.TextField("备注", blank=True, default="")
     is_favorite = models.BooleanField("收藏", default=False)
