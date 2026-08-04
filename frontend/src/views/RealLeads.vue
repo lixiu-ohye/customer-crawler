@@ -71,16 +71,11 @@
         </template>
       </el-table-column>
       <el-table-column prop="platform_name" label="平台" width="80" />
-      <el-table-column prop="title" label="内容" min-width="260" show-overflow-tooltip />
+      <el-table-column prop="content" label="内容" min-width="260" show-overflow-tooltip />
       <el-table-column prop="author" label="作者" width="90" show-overflow-tooltip />
       <el-table-column label="互动" width="90" sortable :sort-by="row => row.like_count + row.comment_count + row.share_count">
         <template #default="{ row }">
           <span class="interact">{{ (row.like_count || 0) + (row.comment_count || 0) + (row.share_count || 0) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="needs" label="客户需求" width="150" show-overflow-tooltip>
-        <template #default="{ row }">
-          <span :class="{ 'need-text': row.is_customer }">{{ row.needs || '—' }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="region" label="地区" width="80" show-overflow-tooltip />
@@ -197,7 +192,6 @@ onUnmounted(() => { window.removeEventListener('mock:realDataReady', onRealDataR
 .intent-high { color: #f56c6c; font-weight: 600; }
 .intent-medium { color: #e6a23c; }
 .intent-low { color: #909399; }
-.need-text { color: #f56c6c; font-weight: 600; }
 .interact { font-weight: 600; color: #606266; }
 .search-icon { font-size: 13px; }
 .lead-table :deep(.el-table__body-wrapper) { overflow-x: auto; }
