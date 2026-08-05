@@ -1,4 +1,3 @@
-// 演示数据层：GitHub Pages 静态环境无后端 API，用 Mock 数据让全站可演示
 // 数据结构与 Django 后端 API 完全一致
 
 import { EMBED_LEADS } from './embed-data.js'
@@ -27,7 +26,6 @@ let KEYWORDS = []
 let TASKS = []
 let HEATMAP = []
 
-// 当前用户套餐（演示态：管理员为 enterprise 企业团队版）
 let CURRENT_PLAN = 'enterprise'
 
 // ---------- CRM 跟进状态（内存态：lead_id -> 状态） ----------
@@ -51,7 +49,6 @@ const LOGS = [
 ]
 
 const INDUSTRIES = ['装修', '全屋定制', '家装', '旧房改造', '办公室装修', '翻新', '整装', '装饰']
-// 官方 API 凭证热配置 (演示: 内存态)
 const MOCK_CREDENTIALS = {}
 const MOCK_BATCHES = []
 const MOCK_INDUSTRIES = [
@@ -107,8 +104,8 @@ const DISCLAIMER = `本平台提供的客户大数据采集与分析服务，旨
 
 // ---------- 系统管理：用户 ----------
 const SYS_USERS = [
-  { id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', is_active: true, plan: { plan_type: 'premium', quota_used: 12, quota_total: 50000, expire_at: '2027-01-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true }, created_at: daysAgo(30) },
-  { id: 2, username: 'demo', nickname: '演示用户', email: 'demo@example.com', phone: '', role_type: 'user', is_active: true, plan: { plan_type: 'free', quota_used: 3, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false }, created_at: daysAgo(12) },
+  { id: 1, username: 'admin', nickname: '示例管理员', email: 'admin@example.com', phone: '', role_type: 'admin', is_active: true, plan: { plan_type: 'premium', quota_used: 12, quota_total: 50000, expire_at: '2027-01-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true }, created_at: daysAgo(30) },
+  { id: 2, username: 'demo', nickname: '示例用户', email: 'demo@example.com', phone: '', role_type: 'user', is_active: true, plan: { plan_type: 'free', quota_used: 3, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false }, created_at: daysAgo(12) },
   { id: 3, username: 'market01', nickname: '市场部小王', email: 'market@example.com', phone: '', role_type: 'user', is_active: true, plan: { plan_type: 'premium', quota_used: 45, quota_total: 50000, expire_at: '2026-12-01', concurrent_tasks: 20, daily_crawl_limit: 1000, api_access: true }, created_at: daysAgo(20) },
   { id: 4, username: 'sales02', nickname: '销售小李', email: 'sales@example.com', phone: '', role_type: 'user', is_active: false, plan: { plan_type: 'free', quota_used: 0, quota_total: 1000, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 100, api_access: false }, created_at: daysAgo(8) }
 ]
@@ -159,7 +156,6 @@ const COUPONS = [
 // ---------- 实名认证状态 ----------
 const REALNAME_STATUS = { authenticated: true, real_name: '张**', id_card_md5: 'a1b2c3***', face_verified: true, auth_date: '2026-07-01', plan_locked: false }
 
-// ---------- B2B 企业库演示数据 ----------
 const BIZ_COMPANIES = [
   { id: 1, name: '苏州精工机械制造有限公司', credit_code: '91320594MA1X2Y3Z4A', legal_person: '王建国', reg_date: '2021-03-15', capital: 500, status: '在业', province: '江苏', city: '苏州', district: '吴中区', industry_l3: '机械加工', channel_type: '工厂', insured_count: 32, recruit_cnt_30d: 4, tender_cnt_90d: 3, patent_cnt: 12, last_tender_date: '2026-07-20', last_recruit_date: '2026-07-25', lng: 120.62, lat: 31.25, product_tags: ['CNC加工', '精密零件'], intent_score: 86, contact_count: 2, top_contact: { name: '李采购', role: '采购经理', role_score: 0.85 } },
   { id: 2, name: '东莞市鑫达五金制品厂', credit_code: '91441900MA5A1B2C3D', legal_person: '陈志强', reg_date: '2019-08-01', capital: 200, status: '在业', province: '广东', city: '东莞', district: '长安镇', industry_l3: '五金制品', channel_type: '工厂', insured_count: 18, recruit_cnt_30d: 2, tender_cnt_90d: 1, patent_cnt: 3, last_tender_date: '2026-07-28', last_recruit_date: '2026-07-10', lng: 113.80, lat: 22.82, product_tags: ['五金冲压', '模具'], intent_score: 74, contact_count: 1, top_contact: { name: '刘厂长', role: '总经理', role_score: 0.92 } },
@@ -180,7 +176,6 @@ const BIZ_TEMPLATES = [
   { id: 3, name: '光电设备采购潮', industry: '光电设备', conditions: '专利≥10 + 近90天招标≥3 + 湖北', is_public: false, usage_count: 32 }
 ]
 
-// ---------- 短视频询盘演示数据 ----------
 const INQUIRIES = [
   { id: 1, uid: 'dy_88213', nickname: '装修小王', platform: 'douyin', content: '老板这厂房装修多少钱一平？我家1200平想翻新', hit_keyword: '多少钱', source_video: '厂房装修实拍案例', video_id: 'v_72901', fan_cnt: 320, region: '广东东莞', intent_score: 0.92, status: 'to_touch', comment_time: daysAgo(0) },
   { id: 2, uid: 'dy_77102', nickname: '机械加工李哥', platform: 'douyin', content: '你们能加工铝件吗？有图纸想找厂家', hit_keyword: '厂家', source_video: 'CNC精密加工现场', video_id: 'v_72887', fan_cnt: 1200, region: '江苏苏州', intent_score: 0.88, status: 'dm_sent', comment_time: daysAgo(0) },
@@ -273,23 +268,6 @@ const NAV_KEYWORD_LIB = {
 const NAV_CITIES = ['北京', '上海', '广州', '深圳', '成都', '杭州', '南京', '武汉', '长沙', '重庆', '西安', '郑州', '岳阳', '周口']
 
 
-// ---- 客户线索演示数据（行业地域导航 drill-down 用） ----
-const NAV_LEADS = [
-  { id: 1, industry: '装修家居', region: '深圳', field: '全屋定制', scenario: '新房装修', need: '全屋定制报价方案', contact: '张先生', phone: '138****2211', intent: 92, status: '待跟进', created_at: '2026-07-31 10:20:00', tags: ['高意向', '新房', '定制'] },
-  { id: 2, industry: '装修家居', region: '广州', field: '旧房翻新', scenario: '老房改造', need: '旧房翻新改造服务', contact: '李女士', phone: '139****8834', intent: 85, status: '待跟进', created_at: '2026-07-30 16:45:00', tags: ['老房', '翻新'] },
-  { id: 3, industry: '法律行业', region: '北京', field: '婚姻家庭', scenario: '离婚财产分割', need: '离婚财产分割法律咨询', contact: '王先生', phone: '136****5521', intent: 95, status: '待跟进', created_at: '2026-07-31 09:15:00', tags: ['高意向', '婚姻'] },
-  { id: 4, industry: '法律行业', region: '上海', field: '交通事故', scenario: '事故赔偿', need: '交通事故赔偿标准咨询', contact: '赵女士', phone: '137****9987', intent: 88, status: '待跟进', created_at: '2026-07-29 14:30:00', tags: ['事故', '赔偿'] },
-  { id: 5, industry: '法律行业', region: '深圳', field: '劳动仲裁', scenario: '欠薪维权', need: '劳动仲裁申请代理', contact: '陈先生', phone: '135****4432', intent: 90, status: '待跟进', created_at: '2026-07-31 11:05:00', tags: ['劳动', '仲裁'] },
-  { id: 6, industry: '法律行业', region: '广州', field: '刑事辩护', scenario: '取保候审', need: '刑事辩护律师委托', contact: '刘女士', phone: '134****2219', intent: 97, status: '待跟进', created_at: '2026-07-28 10:00:00', tags: ['高意向', '刑事'] },
-  { id: 7, industry: '教育培训', region: '成都', field: '学历提升', scenario: '成人高考', need: '成人高考报名辅导', contact: '周先生', phone: '133****7788', intent: 78, status: '待跟进', created_at: '2026-07-30 09:40:00', tags: ['学历', '成考'] },
-  { id: 8, industry: '企业B端财税商务服务', region: '杭州', field: '代理记账', scenario: '新公司注册', need: '公司注册+代理记账套餐', contact: '吴女士', phone: '132****5566', intent: 82, status: '待跟进', created_at: '2026-07-29 15:20:00', tags: ['B端', '记账'] },
-  { id: 9, industry: '婚庆摄影', region: '南京', field: '婚礼策划', scenario: '婚礼筹备', need: '一站式婚礼策划服务', contact: '郑女士', phone: '131****3344', intent: 75, status: '待跟进', created_at: '2026-07-28 17:10:00', tags: ['婚礼'] },
-  { id: 10, industry: '汽车服务行业', region: '武汉', field: '汽车维修', scenario: '事故车维修', need: '事故车维修报价', contact: '孙先生', phone: '130****9981', intent: 80, status: '待跟进', created_at: '2026-07-31 08:50:00', tags: ['事故车'] },
-  { id: 11, industry: '法律行业', region: '重庆', field: '合同纠纷', scenario: '货款拖欠', need: '合同纠纷起诉代理', contact: '钱先生', phone: '159****6622', intent: 93, status: '待跟进', created_at: '2026-07-31 13:30:00', tags: ['高意向', '合同'] },
-  { id: 12, industry: '美业医美', region: '长沙', field: '皮肤管理', scenario: '祛斑祛痘', need: '祛斑疗程咨询', contact: '冯女士', phone: '158****1122', intent: 70, status: '待跟进', created_at: '2026-07-30 11:25:00', tags: ['医美'] },
-  { id: 13, industry: '法律行业', region: '北京', field: '知识产权', scenario: '商标侵权', need: '商标侵权维权诉讼', contact: '何先生', phone: '157****7789', intent: 91, status: '待跟进', created_at: '2026-07-29 16:00:00', tags: ['高意向', '商标'] },
-  { id: 14, industry: '房产同城服务', region: '西安', field: '二手房', scenario: '二手房买卖', need: '二手房买卖中介服务', contact: '罗女士', phone: '156****4455', intent: 72, status: '待跟进', created_at: '2026-07-28 10:35:00', tags: ['二手房'] },
-];
 
 // ---- 法律行业 drill-down 树（行业→领域→场景→需求） ----
 const NAV_LEGAL_TREE = {
@@ -410,7 +388,7 @@ async function route(config) {
       CURRENT_PLAN = 'enterprise'
       return json({
         token: 'mock-jwt-token-for-demo',
-        user: { id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'enterprise', quota_used: 12, quota_total: 300, expire_at: '2027-01-01', concurrent_tasks: 25, daily_crawl_limit: 300, api_access: true, allow_comments: true, sub_accounts: 5, crm: '完整' } }
+        user: { id: 1, username: 'admin', nickname: '示例管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'enterprise', quota_used: 12, quota_total: 300, expire_at: '2027-01-01', concurrent_tasks: 25, daily_crawl_limit: 300, api_access: true, allow_comments: true, sub_accounts: 5, crm: '完整' } }
       })
     }
     return json({ detail: '用户名或密码错误' }, 400)
@@ -420,7 +398,7 @@ async function route(config) {
     return json({ token: 'mock-jwt-token-for-demo', user: { id: 2, username: body.username, nickname: body.username, email: body.email || '', phone: '', role_type: 'user', plan: { plan_type: 'free', quota_used: 0, quota_total: 30, expire_at: '', concurrent_tasks: 1, daily_crawl_limit: 30, api_access: false, allow_comments: false, sub_accounts: 0, crm: false } } })
   }
   if (url === '/auth/profile') {
-    return json({ id: 1, username: 'admin', nickname: '演示管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'enterprise', quota_used: 12, quota_total: 300, expire_at: '2027-01-01', concurrent_tasks: 25, daily_crawl_limit: 300, api_access: true, allow_comments: true, sub_accounts: 5, crm: '完整' } })
+    return json({ id: 1, username: 'admin', nickname: '示例管理员', email: 'admin@example.com', phone: '', role_type: 'admin', plan: { plan_type: 'enterprise', quota_used: 12, quota_total: 300, expire_at: '2027-01-01', concurrent_tasks: 25, daily_crawl_limit: 300, api_access: true, allow_comments: true, sub_accounts: 5, crm: '完整' } })
   }
   if (url === '/auth/plan' && method === 'post') {
     const pid = (body && body.plan_id) || 'standard'
@@ -635,7 +613,6 @@ async function route(config) {
   }
 
 
-  // 行业地域导航 · 客户线索（drill-down）—— 真实数据（LEADS）映射，不再用 NAV_LEADS 演示数据
   const NAV_INDUSTRY_TAGS = ['装修家居', '本地生活家政服务', '汽车服务行业', '美业医美', '教育培训', '企业B端财税商务服务', '房产同城服务', '婚庆摄影', '口腔/健康理疗', '工程建材行业', '宠物行业', '互联网服务商', '法律服务', '法律行业', '金融理财', '本地生活', '电商零售']
   const NAV_FIELD_MAP = { '装修家居': ['全屋定制', '旧房翻新', '新房装修', '局部改造'], '汽车服务行业': ['汽车维修', '汽车保养', '二手车', '贴膜'], '本地生活家政服务': ['家政保洁', '搬家服务', '月嫂保姆'], '美业医美': ['皮肤管理', '祛斑祛痘', '植发'], '教育培训': ['学历提升', '技能培训', '考公考研'], '企业B端财税商务服务': ['代理记账', '公司注册', '税务筹划'], '法律服务': ['法律咨询', '合同纠纷', '劳动仲裁'], '金融理财': ['贷款', '理财', '保险'] }
   if (url === '/misc/industry-leads' && method === 'get') {
@@ -744,7 +721,7 @@ async function route(config) {
     return json({ result: { mode: 'mock' } })
   }
   if (url === '/crawler/config') {
-    return json({ result: { min_interval: 3, max_per_minute: 20, retry_times: 3, mode: 'mock 演示模式' } })
+    return json({ result: { min_interval: 3, max_per_minute: 20, retry_times: 3, mode: 'mock 示例模式' } })
   }
   // ---------- 官方开放 API 合规采集 ----------
   if (url === '/crawler/official/platforms') {
@@ -827,11 +804,10 @@ async function route(config) {
     const logs = [
       { id: 'audit_1', platform: 'douyin', keyword: '装修', result_count: 5, mode: 'demo', ts: new Date().toISOString().slice(0, 19).replace('T', ' ') },
       { id: 'audit_2', platform: 'weibo', keyword: '全屋定制', result_count: 3, mode: 'demo', ts: new Date(Date.now() - 3600000).toISOString().slice(0, 19).replace('T', ' ') },
-      { id: 'audit_3', platform: 'zhihu', keyword: '法律咨询', result_count: 4, mode: 'demo', ts: new Date(Date.now() - 7200000).toISOString().slice(0, 19).replace('T', ' ') }
+      { id: 'audit_3', platform: 'zhihu', keyword: '法律咨询', result_count: 4, mode: 'live', ts: new Date(Date.now() - 7200000).toISOString().slice(0, 19).replace('T', ' ') }
     ]
     return json({ results: logs })
   }
-  // 凭证热配置 (演示: 内存态, 演示配置后该平台切换为 official_api 状态)
   if (url === '/crawler/official/credentials') {
     const pnames = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手', weibo: '微博', zhihu: '知乎', tieba: '贴吧' }
     if (method === 'get') {
@@ -1082,7 +1058,7 @@ async function route(config) {
   }
   if (url === '/biz/companies/export' && method === 'post') {
     // 导出: 扣点+审计+水印
-    return json({ result: { export_id: 'exp_' + Date.now(), count: (body.company_ids || []).length, cost_points: 10 * (body.company_ids || []).length, watermark: '已脱敏-演示水印', audit_logged: true } })
+    return json({ result: { export_id: 'exp_' + Date.now(), count: (body.company_ids || []).length, cost_points: 10 * (body.company_ids || []).length, watermark: '已脱敏-示例水印', audit_logged: true } })
   }
   if (url === '/biz/templates' && method === 'get') {
     return json({ results: BIZ_TEMPLATES, total: BIZ_TEMPLATES.length })
@@ -1131,7 +1107,6 @@ async function route(config) {
 
   // ---------- ??销体系 ----------
   if (url === '/promotion/my' && method === 'get') {
-    // 当前用户推广员信息（演示固定返回??三）
     const me = PROMOTION_DATA.promoters[0]
     const myComms = PROMOTION_DATA.commissions[me.name] || []
     const paidSum = myComms.filter(c => c.status === 'paid').reduce((s, c) => s + c.amount, 0)
