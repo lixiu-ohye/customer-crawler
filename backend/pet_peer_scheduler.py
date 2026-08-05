@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 宠物同行评论区获客调度器
 
@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import subprocess
+CREATE_NO_WINDOW = 0x08000000
 import sys
 import time
 from datetime import datetime
@@ -96,7 +97,8 @@ def run_keyword_crawl(platform, keyword):
     print(f"[宠物同行] {platform} 关键词: {keyword}")
     try:
         proc = subprocess.run(
-            cmd, cwd=str(MEDIACRAWLER_DIR),
+            cmd,
+            creationflags=CREATE_NO_WINDOW, cwd=str(MEDIACRAWLER_DIR),
             capture_output=True, text=True, timeout=KEYWORD_TIMEOUT,
             encoding="utf-8", errors="replace",
             env={**os.environ, "PYTHONIOENCODING": "utf-8"},
@@ -184,3 +186,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
