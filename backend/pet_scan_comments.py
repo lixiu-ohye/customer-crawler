@@ -235,7 +235,7 @@ def scan_files(days=3, max_per_platform=800):
                         comment_count=reply_count,
                         share_count=0,
                         region=region,
-                        demand="宠物服务需求",
+                        demand="宠物行业需求",
                         intent_score=score,
                         intent_label="high" if score >= 60 else "medium" if score >= 40 else "low",
                         tags=tags,
