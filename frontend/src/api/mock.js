@@ -857,7 +857,7 @@ async function route(config) {
     let rows = LEADS
     if (keyword) rows = rows.filter(l => ((l.title || '') + (l.content || '') + (l.author || '')).toLowerCase().indexOf(keyword) >= 0)
     if (platform) rows = rows.filter(l => (l.platform || '').toLowerCase() === platform)
-    if (industry) rows = rows.filter(l => (l.industry || '').toLowerCase().indexOf(industry) >= 0)
+    if (industry) rows = rows.filter(l => ((l.industry || '') + ' ' + (l.demand || '')).toLowerCase().indexOf(industry.toLowerCase()) >= 0)
     if (customer === 'yes') rows = rows.filter(l => l.is_customer === true)
     if (customer === 'no') rows = rows.filter(l => l.is_customer !== true)
     const total = rows.length
