@@ -125,9 +125,9 @@ const total = ref(0)
 const loading = ref(false)
 const importing = ref(false)
 const keyword = ref('')
-const industry = ref('')
+const industry = ref('宠物行业')
 const platform = ref('')
-const custFilter = ref('')
+const custFilter = ref('customer')
 const lastResult = ref('')
 
 const INDUSTRY_OPTIONS = ['装修家居', '法律行业', '美业医美', '本地生活家政服务', '汽车服务行业', '教育培训', '宠物行业', '房产同城服务', '婚庆摄影', '口腔健康理疗', '工程建材行业', '互联网服务商', '企业B端财税商务服务']
@@ -233,10 +233,9 @@ const loadSea = async () => {
 }
 
 onMounted(() => {
-  // 支持全局搜索跳转参数
-  if (route.query.kw) {
-    keyword.value = String(route.query.kw)
-  }
+  // 支持全局搜索跳转参数（关键词 / 行业）
+  if (route.query.kw) keyword.value = String(route.query.kw)
+  if (route.query.industry) industry.value = String(route.query.industry)
   load()
 })
 
