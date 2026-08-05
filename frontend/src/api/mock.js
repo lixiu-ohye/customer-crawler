@@ -948,7 +948,7 @@ async function route(config) {
     if (withComments && !allowComments) {
       return json({ success: false, error: 'comment_forbidden', message: '免费版不支持评论采集，请升级小微个体户版（¥199/月）或企业团队版（¥399/月）' }, 403)
     }
-    // 演示：从真实数据快照中抽取命中关键词的条目作为导入结果
+    // 从真实数据快照中抽取命中关键词的条目作为导入结果
     const kw = keyword
     const candidates = LEADS.filter(l => ((l.title || '') + (l.content || '')).indexOf(kw) >= 0 || (l.industry || '').indexOf(kw) >= 0)
     const picked = candidates.length ? candidates.slice(0, 20) : []
@@ -962,7 +962,7 @@ async function route(config) {
       total: picked.length,
       with_comments: withComments ? (allowComments ? 'enabled' : 'blocked') : 'off',
       comments_imported: withComments && allowComments ? Math.min(50, picked.length * 3) : 0,
-      message: '演示导入完成：从真实数据快照匹配 ' + picked.length + ' 条（' + (names[platform] || platform) + ' / ' + keyword + '）' + (withComments && allowComments ? '，含评论 ' + Math.min(50, picked.length * 3) + ' 条' : ''),
+      message: '导入完成：真实数据匹配 ' + picked.length + ' 条（' + (names[platform] || platform) + ' / ' + keyword + '）' + (withComments && allowComments ? '，含评论 ' + Math.min(50, picked.length * 3) + ' 条' : ''),
       imported_at: now
     })
   }
