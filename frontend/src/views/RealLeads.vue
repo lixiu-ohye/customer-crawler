@@ -178,9 +178,13 @@ const load = async () => {
 }
 
 const doImport = async () => {
-  importing.value = true
+  if (!keyword.value || !keyword.value.trim()) {
+    ElMessage.warning('请先填写采集关键词（如：装修、法律咨询、全屋定制）')
+    importing.value = false
+    return
+  }
   try {
-    const r = await api.post('/crawler/mediacrawler/import', { keyword: keyword.value || '法律咨询' })
+    const r = await api.post('/crawler/mediacrawler/import', { keyword: keyword.value })
     lastResult.value = r.message || `导入完成：新增 ${r.imported} 条，跳过重复 ${r.skipped_dup} 条`
     ElMessage.success(lastResult.value)
     load()
