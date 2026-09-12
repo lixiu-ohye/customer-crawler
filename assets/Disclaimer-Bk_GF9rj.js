@@ -1,4 +1,4 @@
-import{_ as g,r as i,a as t,c as s,b as o,d as c,F as k,I as y,w as d,h as m,k as V,J as C,s as n,t as A,E as I}from"./index-c6k3gXm5.js";const N={class:"page-card"},w={class:"disclaimer-box"},B={class:"mt16"},D={key:0,style:{"margin-left":"12px",color:"#67C23A","font-size":"13px"}},E={__name:"Disclaimer",setup(S){const a=i(!1),r=i(localStorage.getItem("disclaimerAccepted")==="1"),p=C(()=>`本平台提供的法律行业大数据案源获取与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
+import{_ as g,r as i,a as t,c as s,b as o,d as c,F as k,I as y,w as d,h as m,k as V,J as C,s as n,t as A,E as I}from"./index-DScNEks9.js";const N={class:"page-card"},w={class:"disclaimer-box"},B={class:"mt16"},D={key:0,style:{"margin-left":"12px",color:"#67C23A","font-size":"13px"}},E={__name:"Disclaimer",setup(S){const a=i(!1),r=i(localStorage.getItem("disclaimerAccepted")==="1"),p=C(()=>`本平台提供的法律行业大数据案源获取与分析服务，旨在帮助用户合法合规地开展市场调研与客户开发工作。
 使用本平台前，请您仔细阅读并理解以下条款：
 
 一、合法性声明
